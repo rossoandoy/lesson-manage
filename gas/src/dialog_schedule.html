@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>コマを組む</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 13px;
+      background: #f8f9fa;
+      color: #333;
+      padding: 16px;
+    }
+
+    .section-title {
+      font-size: 11px;
+      font-weight: bold;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .context-box {
+      background: #e8f0fe;
+      border: 1px solid #c5d3f5;
+      border-radius: 6px;
+      padding: 10px 12px;
+      margin-bottom: 14px;
+      font-weight: bold;
+      color: #1a56db;
+      font-size: 14px;
+    }
+
+    .form-group {
+      margin-bottom: 12px;
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: bold;
+      color: #555;
+      margin-bottom: 4px;
+    }
+
+    select, input[type="date"], input[type="text"] {
+      width: 100%;
+      padding: 7px 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 13px;
+      background: #fff;
+      color: #333;
+    }
+
+    select:focus, input:focus {
+      outline: none;
+      border-color: #4285f4;
+      box-shadow: 0 0 0 2px rgba(66,133,244,0.2);
+    }
+
+    .radio-group {
+      display: flex;
+      gap: 16px;
+    }
+
+    .radio-group label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: normal;
+      cursor: pointer;
+    }
+
+    .student-block {
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      padding: 10px 12px;
+      margin-bottom: 10px;
+    }
+
+    .student-block.hidden { display: none; }
+
+    .student-row {
+      display: grid;
+      grid-template-columns: 2fr 1.5fr 0.8fr;
+      gap: 8px;
+      align-items: end;
+    }
+
+    .student-row .form-group { margin-bottom: 0; }
+
+    .grade-display {
+      padding: 7px 10px;
+      background: #f5f5f5;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 13px;
+      color: #555;
+      min-height: 32px;
+    }
+
+    .repeat-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .conflict-area {
+      background: #fff3cd;
+      border: 1px solid #ffc107;
+      border-radius: 4px;
+      padding: 8px 12px;
+      font-size: 12px;
+      color: #856404;
+      margin-bottom: 10px;
+      white-space: pre-wrap;
+      display: none;
+    }
+
+    .conflict-area.error {
+      background: #f8d7da;
+      border-color: #f5c2c7;
+      color: #842029;
+    }
+
+    .conflict-area.success {
+      background: #d1e7dd;
+      border-color: #a3cfbb;
+      color: #0f5132;
+    }
+
+    .button-row {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    button {
+      padding: 8px 20px;
+      border: none;
+      border-radius: 4px;
+      font-size: 13px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    #btn-cancel {
+      background: #fff;
+      border: 1px solid #ccc;
+      color: #555;
+    }
+
+    #btn-cancel:hover { background: #f5f5f5; }
+
+    #btn-submit {
+      background: #1a73e8;
+      color: #fff;
+    }
+
+    #btn-submit:hover { background: #1558b0; }
+
+    #btn-submit:disabled {
+      background: #a8c7fa;
+      cursor: not-allowed;
+    }
+
+    .loading { opacity: 0.5; pointer-events: none; }
+
+    hr { border: none; border-top: 1px solid #e0e0e0; margin: 12px 0; }
+  </style>
+</head>
+<body>
+
+  <!-- コマ情報表示 -->
+  <div class="context-box" id="context-display">読み込み中...</div>
+
+  <!-- 講師選択 -->
+  <div class="form-group">
+    <label>講師</label>
+    <select id="teacher-select">
+      <option value="">-- 選択してください --</option>
+    </select>
+  </div>
+
+  <!-- 授業形式 -->
+  <div class="form-group">
+    <label>授業形式</label>
+    <div class="radio-group">
+      <label>
+        <input type="radio" name="capacity" value="1：1" checked onchange="onCapacityChange()"> 1：1
+      </label>
+      <label>
+        <input type="radio" name="capacity" value="1：2" onchange="onCapacityChange()"> 1：2
+      </label>
+    </div>
+  </div>
+
+  <hr>
+  <div class="section-title">生徒情報</div>
+
+  <!-- 生徒1 -->
+  <div class="student-block" id="student1-block">
+    <div style="font-size:11px;color:#888;margin-bottom:8px;">生徒 1</div>
+    <div class="student-row">
+      <div class="form-group">
+        <label>生徒名</label>
+        <select id="student1-select" onchange="onStudent1Change()">
+          <option value="">-- 選択 --</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>教科</label>
+        <select id="subject1-select">
+          <option value="">-- 選択 --</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>学年</label>
+        <div class="grade-display" id="student1-grade">-</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 生徒2 (1:2 のみ表示) -->
+  <div class="student-block hidden" id="student2-block">
+    <div style="font-size:11px;color:#888;margin-bottom:8px;">生徒 2</div>
+    <div class="student-row">
+      <div class="form-group">
+        <label>生徒名</label>
+        <select id="student2-select" onchange="onStudent2Change()">
+          <option value="">-- 選択 --</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>教科</label>
+        <select id="subject2-select">
+          <option value="">-- 選択 --</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>学年</label>
+        <div class="grade-display" id="student2-grade">-</div>
+      </div>
+    </div>
+  </div>
+
+  <hr>
+  <div class="section-title">繰り返し設定</div>
+
+  <div class="repeat-row">
+    <div class="form-group">
+      <label>開始日</label>
+      <input type="date" id="start-date">
+    </div>
+    <div class="form-group">
+      <label>終了日</label>
+      <input type="date" id="end-date">
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label>繰り返し</label>
+    <div class="radio-group">
+      <label>
+        <input type="radio" name="repeat" value="weekly" checked> 週次（同じ曜日）
+      </label>
+      <label>
+        <input type="radio" name="repeat" value="daily"> 日次（毎日）
+      </label>
+    </div>
+  </div>
+
+  <!-- メッセージエリア -->
+  <div class="conflict-area" id="message-area"></div>
+
+  <!-- ボタン -->
+  <div class="button-row">
+    <button id="btn-cancel" onclick="onCancel()">キャンセル</button>
+    <button id="btn-submit" onclick="onSubmit()">確定</button>
+  </div>
+
+<script>
+  // ─── 状態 ───
+  let _context  = {};
+  let _students = [];  // { id, name, grade }
+  let _teachers = [];  // { id, name }
+  let _subjects = [];  // string[]
+
+  // ─── 初期化 ───
+  document.addEventListener('DOMContentLoaded', () => {
+    google.script.run
+      .withSuccessHandler(populateAll)
+      .withFailureHandler(showError)
+      .getDialogInitData();
+  });
+
+  function populateAll(data) {
+    _context  = data.context  || {};
+    _students = data.students || [];
+    _teachers = data.teachers || [];
+    _subjects = data.subjects || [];
+
+    // コマ情報表示
+    const ctx = _context;
+    document.getElementById('context-display').textContent =
+      ctx.dateLabel
+        ? `${ctx.dateLabel}  ${ctx.period}限  ブース ${ctx.booth}`
+        : '（コマ情報なし）';
+
+    // 開始日初期値
+    if (ctx.dateLabel) {
+      const iso = ctx.dateLabel.replace(/\//g, '-');
+      document.getElementById('start-date').value = iso;
+      document.getElementById('end-date').value   = iso;
+    }
+
+    // セレクト充填
+    populateSelect('teacher-select', _teachers.map(t => ({ value: t.name, label: t.name })));
+    populateSelect('student1-select', _students.map(s => ({ value: s.name, label: s.name })));
+    populateSelect('student2-select', _students.map(s => ({ value: s.name, label: s.name })));
+    _subjects.forEach(subj => {
+      ['subject1-select', 'subject2-select'].forEach(id => {
+        const opt = document.createElement('option');
+        opt.value = subj; opt.textContent = subj;
+        document.getElementById(id).appendChild(opt);
+      });
+    });
+  }
+
+  function populateSelect(selectId, options) {
+    const sel = document.getElementById(selectId);
+    options.forEach(({ value, label }) => {
+      const opt = document.createElement('option');
+      opt.value = value; opt.textContent = label;
+      sel.appendChild(opt);
+    });
+  }
+
+  // ─── イベントハンドラ ───
+  function onCapacityChange() {
+    const is12 = getSelectedCapacity() === '1：2';
+    document.getElementById('student2-block').classList.toggle('hidden', !is12);
+  }
+
+  function onStudent1Change() {
+    const name = document.getElementById('student1-select').value;
+    const student = _students.find(s => s.name === name);
+    document.getElementById('student1-grade').textContent = student ? (student.grade || '-') : '-';
+  }
+
+  function onStudent2Change() {
+    const name = document.getElementById('student2-select').value;
+    const student = _students.find(s => s.name === name);
+    document.getElementById('student2-grade').textContent = student ? (student.grade || '-') : '-';
+  }
+
+  // ─── 送信 ───
+  function onSubmit() {
+    clearMessage();
+
+    const capacity = getSelectedCapacity();
+    const repeat   = document.querySelector('input[name="repeat"]:checked').value;
+
+    const startVal = document.getElementById('start-date').value;
+    const endVal   = document.getElementById('end-date').value;
+
+    if (!startVal || !endVal) {
+      showMessage('開始日と終了日を入力してください', 'error');
+      return;
+    }
+
+    const formData = {
+      period:        _context.period,
+      booth:         _context.booth,
+      teacherName:   document.getElementById('teacher-select').value,
+      student1Name:  document.getElementById('student1-select').value,
+      student1Grade: document.getElementById('student1-grade').textContent,
+      subject1:      document.getElementById('subject1-select').value,
+      student2Name:  capacity === '1：2' ? document.getElementById('student2-select').value : '',
+      student2Grade: capacity === '1：2' ? document.getElementById('student2-grade').textContent : '',
+      subject2:      capacity === '1：2' ? document.getElementById('subject2-select').value : '',
+      capacity,
+      startDate:     startVal.replace(/-/g, '/'),
+      endDate:       endVal.replace(/-/g, '/'),
+      repeat,
+    };
+
+    if (!formData.teacherName) {
+      showMessage('講師を選択してください', 'error'); return;
+    }
+    if (!formData.student1Name) {
+      showMessage('生徒1を選択してください', 'error'); return;
+    }
+
+    setLoading(true);
+    google.script.run
+      .withSuccessHandler(onSubmitSuccess)
+      .withFailureHandler(onSubmitError)
+      .processScheduleDialogSubmit(formData);
+  }
+
+  function onSubmitSuccess(result) {
+    setLoading(false);
+    if (result.success) {
+      showMessage(result.message, 'success');
+      setTimeout(() => google.script.host.close(), 1500);
+    } else {
+      showMessage(result.message, 'error');
+    }
+  }
+
+  function onSubmitError(err) {
+    setLoading(false);
+    showMessage('エラー: ' + err.message, 'error');
+  }
+
+  function onCancel() {
+    google.script.host.close();
+  }
+
+  // ─── ユーティリティ ───
+  function getSelectedCapacity() {
+    return document.querySelector('input[name="capacity"]:checked').value;
+  }
+
+  function showMessage(msg, type) {
+    const el = document.getElementById('message-area');
+    el.textContent = msg;
+    el.className = 'conflict-area ' + (type || '');
+    el.style.display = 'block';
+  }
+
+  function clearMessage() {
+    const el = document.getElementById('message-area');
+    el.style.display = 'none';
+    el.textContent = '';
+  }
+
+  function showError(err) {
+    showMessage('初期化エラー: ' + err.message, 'error');
+  }
+
+  function setLoading(loading) {
+    document.getElementById('btn-submit').disabled = loading;
+    document.body.classList.toggle('loading', loading);
+  }
+</script>
+</body>
+</html>

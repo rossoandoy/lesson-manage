@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 13px;
+      color: #333;
+      background: #f8f9fa;
+    }
+
+    /* ─── タブ ─── */
+    .tabs {
+      display: flex;
+      border-bottom: 2px solid #dadce0;
+      background: #fff;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 10px 4px;
+      border: none;
+      background: none;
+      font-size: 12px;
+      font-weight: bold;
+      color: #5f6368;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+    }
+    .tab-btn.active {
+      color: #1a73e8;
+      border-bottom-color: #1a73e8;
+    }
+    .tab-panel { display: none; padding: 8px; }
+    .tab-panel.active { display: block; }
+
+    /* ─── セクション ─── */
+    .section {
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      padding: 10px;
+      margin-bottom: 8px;
+    }
+    .section-title {
+      font-size: 11px;
+      font-weight: bold;
+      color: #5f6368;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    /* ─── フォーム要素 ─── */
+    label {
+      display: block;
+      font-size: 11px;
+      color: #5f6368;
+      margin-bottom: 2px;
+    }
+    input[type="date"], input[type="number"], input[type="text"], select {
+      width: 100%;
+      padding: 5px 6px;
+      border: 1px solid #dadce0;
+      border-radius: 4px;
+      font-size: 12px;
+      color: #333;
+      background: #fff;
+      margin-bottom: 6px;
+    }
+    input[type="number"] { width: 70px; margin-bottom: 6px; }
+    .row2 { display: flex; gap: 6px; margin-bottom: 0; }
+    .row2 > div { flex: 1; }
+    .row2 input[type="number"] { width: 100%; }
+
+    /* ─── ラジオ ─── */
+    .radio-group { display: flex; gap: 12px; margin-bottom: 6px; }
+    .radio-group label {
+      display: flex; align-items: center; gap: 4px;
+      font-size: 12px; color: #333; cursor: pointer; margin-bottom: 0;
+    }
+    .radio-group input { width: auto; margin: 0; }
+
+    /* ─── コマ状態表示 ─── */
+    .slot-info {
+      background: #e8f0fe;
+      border-radius: 4px;
+      padding: 6px 8px;
+      font-size: 12px;
+      color: #1a73e8;
+      margin-bottom: 6px;
+      min-height: 26px;
+    }
+    .slot-empty { color: #9aa0a6; background: #f1f3f4; }
+    .slot-full  { color: #c5221f; background: #fce8e6; }
+
+    /* ─── 配置状況バッジ ─── */
+    .slot-status-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px;
+      margin-top: 4px;
+    }
+    .status-item {
+      font-size: 11px;
+      padding: 3px 6px;
+      border-radius: 3px;
+      background: #f1f3f4;
+      color: #5f6368;
+    }
+    .status-item.filled { background: #e6f4ea; color: #137333; }
+
+    /* ─── 学年バッジ ─── */
+    .grade-badge {
+      display: inline-block;
+      background: #f1f3f4;
+      color: #5f6368;
+      padding: 2px 6px;
+      border-radius: 10px;
+      font-size: 11px;
+      margin-bottom: 6px;
+    }
+
+    /* ─── 時限時間帯 ─── */
+    .period-times-list { list-style: none; }
+    .period-time-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+    .period-time-item label {
+      width: 36px;
+      flex-shrink: 0;
+      margin-bottom: 0;
+    }
+    .period-time-item input {
+      flex: 1;
+      margin-bottom: 0;
+      font-size: 11px;
+    }
+
+    /* ─── ボタン ─── */
+    button {
+      width: 100%;
+      padding: 8px;
+      border: none;
+      border-radius: 4px;
+      font-size: 12px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .btn-primary   { background: #1a73e8; color: #fff; }
+    .btn-primary:hover { background: #1557b0; }
+    .btn-primary:disabled { background: #a8c7fa; cursor: default; }
+    .btn-secondary { background: #f1f3f4; color: #333; }
+    .btn-secondary:hover { background: #e8eaed; }
+    .btn-danger    { background: #ea4335; color: #fff; }
+    .btn-danger:hover { background: #c5221f; }
+    .btn-sm { padding: 5px 8px; font-size: 11px; }
+
+    /* ─── メッセージ ─── */
+    .msg {
+      margin-top: 6px;
+      padding: 6px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+    .msg-success { background: #e6f4ea; color: #137333; }
+    .msg-error   { background: #fce8e6; color: #c5221f; }
+    .msg-loading { color: #5f6368; background: #f1f3f4; }
+    .msg-info    { color: #1a73e8; background: #e8f0fe; }
+
+    .hidden { display: none; }
+    .divider { border: none; border-top: 1px solid #e0e0e0; margin: 8px 0; }
+    .hint { font-size: 11px; color: #9aa0a6; margin-bottom: 6px; }
+
+    /* ─── ローディングオーバーレイ ─── */
+    .loading-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(248,249,250,0.9);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      z-index: 100; font-size: 13px; color: #5f6368;
+    }
+    .loading-spinner {
+      width: 24px; height: 24px;
+      border: 3px solid #dadce0; border-top-color: #1a73e8;
+      border-radius: 50%; animation: spin 0.8s linear infinite;
+      margin-bottom: 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<!-- ─── ローディングオーバーレイ ─── -->
+<div id="loadingOverlay" class="loading-overlay">
+  <div class="loading-spinner"></div>
+  <div>読み込み中...</div>
+</div>
+
+<!-- ─── タブヘッダー ─── -->
+<div class="tabs">
+  <button class="tab-btn active" onclick="showTab('settings')">⚙ 設定</button>
+  <button class="tab-btn"       onclick="showTab('schedule')">📋 コマ組</button>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     設定タブ
+════════════════════════════════════════════════ -->
+<div id="tab-settings" class="tab-panel active">
+
+  <!-- 基本設定 -->
+  <div class="section">
+    <div class="section-title">基本設定</div>
+    <label>教室名</label>
+    <input type="text" id="classroomName" placeholder="例: 〇〇教室">
+    <div class="row2">
+      <div>
+        <label>ブース数</label>
+        <input type="number" id="boothCount" min="1" max="20" value="5">
+      </div>
+      <div>
+        <label>時限数</label>
+        <input type="number" id="periodCount" min="1" max="20" value="10" onchange="renderPeriodTimes()">
+      </div>
+    </div>
+    <label>各時限の時間帯</label>
+    <ul class="period-times-list" id="periodTimesList"></ul>
+    <button class="btn-primary btn-sm" onclick="saveSettingsAction()" style="width:auto;padding:6px 16px;">設定を保存</button>
+    <div id="msgSettings"></div>
+  </div>
+
+  <!-- 表示設定 -->
+  <div class="section">
+    <div class="section-title">表示設定</div>
+    <label>年度 <span class="hint">（例: 2025年度 → 2025/4/1〜2026/3/31）</span></label>
+    <div class="row2" style="align-items:flex-end;">
+      <div>
+        <input type="number" id="fiscalYear" min="2020" max="2099" style="width:100%;margin-bottom:0;">
+      </div>
+      <div>
+        <button class="btn-danger btn-sm" onclick="generateYearGrid()" style="width:100%;margin-bottom:6px;">
+          今年度の全日程を生成
+        </button>
+      </div>
+    </div>
+    <div id="msgYearGrid"></div>
+
+    <div class="divider"></div>
+    <p class="hint">生成済みのグリッドの表示範囲のみ切り替えます（行・列の表示/非表示）</p>
+    <div style="display:flex;gap:4px;margin-bottom:8px;">
+      <button class="btn-secondary btn-sm" onclick="navigateWeek(-1)" style="flex:1;">◀ 前週</button>
+      <button class="btn-secondary btn-sm" onclick="navigateWeek(0)"  style="flex:1;">今週</button>
+      <button class="btn-secondary btn-sm" onclick="navigateWeek(1)"  style="flex:1;">翌週 ▶</button>
+    </div>
+    <div class="row2">
+      <div>
+        <label>表示開始日</label>
+        <input type="date" id="displayStart">
+      </div>
+      <div>
+        <label>表示終了日</label>
+        <input type="date" id="displayEnd">
+      </div>
+    </div>
+    <label>表示時限</label>
+    <div class="row2" style="align-items:center;margin-bottom:6px;">
+      <div>
+        <input type="number" id="displayFrom" min="1" max="20" value="1" style="width:100%;margin-bottom:0;">
+      </div>
+      <div style="flex:0;padding:0 4px;color:#5f6368;font-size:12px;">限 〜</div>
+      <div>
+        <input type="number" id="displayTo" min="1" max="20" value="10" style="width:100%;margin-bottom:0;">
+      </div>
+      <div style="flex:0;padding:0 4px;color:#5f6368;font-size:12px;">限</div>
+    </div>
+    <button class="btn-secondary btn-sm" onclick="updateDisplayAction()" style="width:auto;padding:6px 16px;">表示を更新</button>
+    <div id="msgDisplay"></div>
+  </div>
+
+</div><!-- /tab-settings -->
+
+
+<!-- ═══════════════════════════════════════════════
+     コマ組タブ
+════════════════════════════════════════════════ -->
+<div id="tab-schedule" class="tab-panel">
+
+  <!-- 選択中のコマ -->
+  <div class="section">
+    <div class="section-title">📌 選択中のコマ</div>
+    <div class="slot-info slot-empty" id="slotInfo">セルを選択してください</div>
+    <div class="slot-status-grid hidden" id="slotStatusGrid">
+      <div class="status-item" id="statusTeacher">講師: -</div>
+      <div class="status-item" id="statusStudent1">生徒1: -</div>
+      <div class="status-item" id="statusStudent2">生徒2: -</div>
+      <div class="status-item" id="statusCapacity">形式: -</div>
+    </div>
+    <div style="display:flex;gap:6px;margin-top:6px;">
+      <button class="btn-secondary btn-sm" onclick="refreshSlot()" style="width:auto;padding:5px 12px;">
+        現在のセルを確認
+      </button>
+      <button class="btn-danger btn-sm" onclick="deleteSlot()" style="width:auto;padding:5px 12px;">
+        このコマを削除
+      </button>
+    </div>
+    <div id="msgSlotDelete"></div>
+  </div>
+
+  <!-- 講師配置 -->
+  <div class="section">
+    <div class="section-title">👨‍🏫 講師配置</div>
+    <label>講師</label>
+    <select id="teacherName"><option value="">-- 選択 --</option></select>
+    <div class="row2">
+      <div>
+        <label>繰り返し終了日</label>
+        <input type="date" id="teacherRepeatEnd">
+      </div>
+      <div>
+        <label>パターン</label>
+        <select id="teacherRepeat">
+          <option value="weekly">週次（同じ曜日）</option>
+          <option value="daily">日次</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn-primary" id="btnTeacher" onclick="placeTeacher()">講師を配置する</button>
+    <div id="msgTeacher"></div>
+  </div>
+
+  <!-- 生徒配置 -->
+  <div class="section">
+    <div class="section-title">👤 生徒配置</div>
+
+    <!-- 生徒1 -->
+    <div>
+      <div class="row2">
+        <div>
+          <label>生徒1</label>
+          <select id="student1Name" onchange="updateGrade('student1Name','grade1')">
+            <option value="">-- 選択 --</option>
+          </select>
+        </div>
+        <div>
+          <label>教科</label>
+          <select id="subject1"><option value="">-- 選択 --</option></select>
+        </div>
+      </div>
+      <div class="grade-badge" id="grade1">学年: -</div>
+    </div>
+
+    <!-- 生徒2（常に表示、入力すると自動で1:2になる） -->
+    <div id="student2Section">
+      <div class="row2">
+        <div>
+          <label>生徒2 <span class="hint">（1:2の場合のみ）</span></label>
+          <select id="student2Name" onchange="updateGrade('student2Name','grade2')">
+            <option value="">-- 選択 --</option>
+          </select>
+        </div>
+        <div>
+          <label>教科</label>
+          <select id="subject2"><option value="">-- 選択 --</option></select>
+        </div>
+      </div>
+      <div class="grade-badge" id="grade2">学年: -</div>
+    </div>
+
+    <div class="row2">
+      <div>
+        <label>繰り返し終了日</label>
+        <input type="date" id="studentRepeatEnd">
+      </div>
+      <div>
+        <label>パターン</label>
+        <select id="studentRepeat">
+          <option value="weekly">週次（同じ曜日）</option>
+          <option value="daily">日次</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn-primary" id="btnStudent" onclick="placeStudent()">生徒を配置する</button>
+    <div id="msgStudent"></div>
+  </div>
+
+  <!-- 生徒検索 -->
+  <div class="section">
+    <div class="section-title">🔍 生徒検索・ハイライト</div>
+    <div style="display:flex;gap:4px;margin-bottom:6px;">
+      <select id="searchStudent" style="flex:1;margin-bottom:0;">
+        <option value="">-- 生徒を選択 --</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:4px;">
+      <button class="btn-primary btn-sm" onclick="searchStudent()" style="flex:1;">検索</button>
+      <button class="btn-secondary btn-sm" onclick="clearSearchHighlight()" style="flex:1;">解除</button>
+    </div>
+    <div id="msgSearch"></div>
+  </div>
+
+  <!-- 休校日一括削除 -->
+  <div class="section">
+    <div class="section-title">🚫 休校日 — 全コマ一括削除</div>
+    <label>対象日</label>
+    <input type="date" id="bulkDeleteDate">
+    <button class="btn-danger btn-sm" onclick="bulkDeleteDate()">この日の全コマを削除</button>
+    <div id="msgBulkDate"></div>
+  </div>
+
+  <!-- 途中解約一括削除 -->
+  <div class="section">
+    <div class="section-title">✂ 途中解約 — 生徒一括削除</div>
+    <label>対象生徒</label>
+    <select id="bulkDeleteStudent" style="margin-bottom:6px;">
+      <option value="">-- 生徒を選択 --</option>
+    </select>
+    <label>削除開始日</label>
+    <input type="date" id="bulkDeleteFrom">
+    <button class="btn-danger btn-sm" onclick="bulkDeleteStudent()">この生徒の全コマを削除</button>
+    <div id="msgBulkStudent"></div>
+  </div>
+
+  <!-- 講師一括削除 -->
+  <div class="section">
+    <div class="section-title">✂ 講師一括削除</div>
+    <label>対象講師</label>
+    <select id="bulkDeleteTeacher" style="margin-bottom:6px;">
+      <option value="">-- 講師を選択 --</option>
+    </select>
+    <label>削除開始日</label>
+    <input type="date" id="bulkDeleteTeacherFrom">
+    <button class="btn-danger btn-sm" onclick="bulkDeleteTeacher()">この講師の全コマを削除</button>
+    <div id="msgBulkTeacher"></div>
+  </div>
+
+</div><!-- /tab-schedule -->
+
+<script>
+  // ─── グローバル状態 ───────────────────────────────────────
+  var masterData = { teachers: [], students: [], subjects: [], settings: null };
+  var currentSlotStatus = null;
+
+  // ─── 初期化 ──────────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', function() {
+    // 年度初期値（今年度）
+    var now = new Date();
+    var fy = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
+    document.getElementById('fiscalYear').value = fy;
+
+    // 表示期間デフォルト（今月）
+    var y = now.getFullYear(), m = now.getMonth();
+    var firstDay = new Date(y, m, 1);
+    var lastDay  = new Date(y, m + 1, 0);
+    document.getElementById('displayStart').value = fmtDate(firstDay);
+    document.getElementById('displayEnd').value   = fmtDate(lastDay);
+    document.getElementById('teacherRepeatEnd').value = fmtDate(now);
+    document.getElementById('studentRepeatEnd').value = fmtDate(now);
+
+    google.script.run
+      .withSuccessHandler(onSidebarDataLoaded)
+      .withFailureHandler(function(e) {
+        document.getElementById('loadingOverlay').style.display = 'none';
+        setMsg('msgStudent', 'データ取得エラー: ' + e.message, 'error');
+      })
+      .getSidebarData();
+  });
+
+  function onSidebarDataLoaded(data) {
+    document.getElementById('loadingOverlay').style.display = 'none';
+    masterData = data;
+
+    // 設定反映
+    if (data.settings) {
+      var s = data.settings;
+      document.getElementById('classroomName').value = s.classroomName || '';
+      document.getElementById('boothCount').value    = s.boothCount    || 5;
+      document.getElementById('periodCount').value   = s.periodCount   || 10;
+      document.getElementById('displayFrom').value   = s.displayPeriodFrom || 1;
+      document.getElementById('displayTo').value     = s.displayPeriodTo   || 10;
+      masterData._periodTimes = s.periodTimes || [];
+      renderPeriodTimes();
+    }
+
+    // プルダウン生成
+    populateSelect('teacherName', data.teachers.map(function(t) { return { value: t.name, label: t.name }; }));
+    populateStudentSelect('student1Name', data.students);
+    populateStudentSelect('student2Name', data.students);
+    populateSelect('subject1', data.subjects.map(function(s) { return { value: s, label: s }; }));
+    populateSelect('subject2', data.subjects.map(function(s) { return { value: s, label: s }; }));
+
+    // 検索・一括削除用プルダウン
+    populateStudentSelect('searchStudent', data.students);
+    populateStudentSelect('bulkDeleteStudent', data.students);
+    populateSelect('bulkDeleteTeacher', data.teachers.map(function(t) { return { value: t.name, label: t.name }; }));
+
+    // コマ状態
+    if (data.slotStatus) {
+      currentSlotStatus = data.slotStatus;
+      showSlotStatus(currentSlotStatus);
+    }
+
+  }
+
+  // ─── タブ切り替え ─────────────────────────────────────────
+  function showTab(name) {
+    document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.remove('active'); });
+    document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+    document.getElementById('tab-' + name).classList.add('active');
+    event.currentTarget.classList.add('active');
+  }
+
+  // ─── 時限時間帯フォーム ───────────────────────────────────
+  function renderPeriodTimes() {
+    var count = parseInt(document.getElementById('periodCount').value) || 10;
+    var times = masterData._periodTimes || [];
+    var list  = document.getElementById('periodTimesList');
+    list.innerHTML = '';
+    for (var i = 0; i < count; i++) {
+      var li = document.createElement('li');
+      li.className = 'period-time-item';
+      li.innerHTML =
+        '<label>' + (i + 1) + '限</label>' +
+        '<input type="text" class="period-time-input" value="' + (times[i] || '') + '" ' +
+               'placeholder="例: 9:00-10:00">';
+      list.appendChild(li);
+    }
+  }
+
+  // ─── 設定を保存 ──────────────────────────────────────────
+  function saveSettingsAction() {
+    var timeInputs = document.querySelectorAll('.period-time-input');
+    var periodTimes = [];
+    timeInputs.forEach(function(inp) { periodTimes.push(inp.value.trim()); });
+
+    var settings = {
+      classroomName:       document.getElementById('classroomName').value.trim(),
+      boothCount:          parseInt(document.getElementById('boothCount').value) || 5,
+      periodCount:         parseInt(document.getElementById('periodCount').value) || 10,
+      periodTimes:         periodTimes,
+      displayPeriodFrom:   parseInt(document.getElementById('displayFrom').value) || 1,
+      displayPeriodTo:     parseInt(document.getElementById('displayTo').value)   || 10,
+    };
+
+    var btn = event.currentTarget;
+    btn.disabled = true; btn.textContent = '保存中...';
+    setMsg('msgSettings', '保存中...', 'loading');
+    google.script.run
+      .withSuccessHandler(function() {
+        btn.disabled = false; btn.textContent = '設定を保存';
+        masterData._periodTimes = periodTimes;
+        setMsg('msgSettings', '設定を保存しました', 'success');
+      })
+      .withFailureHandler(function(e) {
+        btn.disabled = false; btn.textContent = '設定を保存';
+        setMsg('msgSettings', 'エラー: ' + e.message, 'error');
+      })
+      .saveSettings(settings);
+  }
+
+  // ─── 年度グリッド生成 ─────────────────────────────────────
+  function generateYearGrid() {
+    var fy = parseInt(document.getElementById('fiscalYear').value);
+    if (!fy || fy < 2020) { setMsg('msgYearGrid', '有効な年度を入力してください', 'error'); return; }
+
+    var confirmMsg = fy + '年度（' + fy + '/4/1〜' + (fy+1) + '/3/31）の全日程を生成します。\n' +
+                     '既存のデータはすべて削除されます。続けますか？';
+    if (!confirm(confirmMsg)) return;
+
+    var btn = event.currentTarget;
+    btn.disabled = true; btn.textContent = '生成中...';
+    setMsg('msgYearGrid', '生成中（約30〜60秒かかります）...', 'loading');
+    google.script.run
+      .withSuccessHandler(function() {
+        btn.disabled = false; btn.textContent = '今年度の全日程を生成';
+        setMsg('msgYearGrid', fy + '年度のグリッドを生成しました', 'success');
+      })
+      .withFailureHandler(function(e) {
+        btn.disabled = false; btn.textContent = '今年度の全日程を生成';
+        setMsg('msgYearGrid', 'エラー: ' + e.message, 'error');
+      })
+      .initializeYearGrid(fy);
+  }
+
+  // ─── 表示を更新 ──────────────────────────────────────────
+  function updateDisplayAction() {
+    var start = document.getElementById('displayStart').value;
+    var end   = document.getElementById('displayEnd').value;
+    var from  = parseInt(document.getElementById('displayFrom').value) || 1;
+    var to    = parseInt(document.getElementById('displayTo').value)   || 10;
+
+    if (!start || !end) { setMsg('msgDisplay', '開始日・終了日を入力してください', 'error'); return; }
+    if (start > end)    { setMsg('msgDisplay', '開始日は終了日より前に設定してください', 'error'); return; }
+
+    var btn = document.querySelector('#tab-settings [onclick*="updateDisplayAction"]');
+    if (btn) { btn.disabled = true; btn.textContent = '更新中...'; }
+    setMsg('msgDisplay', '更新中...', 'loading');
+    google.script.run
+      .withSuccessHandler(function() {
+        if (btn) { btn.disabled = false; btn.textContent = '表示を更新'; }
+        setMsg('msgDisplay', '表示を更新しました', 'success');
+      })
+      .withFailureHandler(function(e) {
+        if (btn) { btn.disabled = false; btn.textContent = '表示を更新'; }
+        setMsg('msgDisplay', 'エラー: ' + e.message, 'error');
+      })
+      .updateDisplaySettings(start, end, from, to);
+  }
+
+  // ─── コマ状態確認 ─────────────────────────────────────────
+  function refreshSlot() {
+    var infoEl = document.getElementById('slotInfo');
+    infoEl.className = 'slot-info slot-empty';
+    infoEl.textContent = '読み込み中...';
+    document.getElementById('slotStatusGrid').classList.add('hidden');
+    google.script.run
+      .withSuccessHandler(function(status) {
+        currentSlotStatus = status;
+        showSlotStatus(status);
+        applySlotAutoDetect(status);
+      })
+      .withFailureHandler(function(e) { setMsg('msgStudent', 'セル情報取得エラー: ' + e.message, 'error'); })
+      .getSlotStatus();
+  }
+
+  function showSlotStatus(status) {
+    var infoEl  = document.getElementById('slotInfo');
+    var gridEl  = document.getElementById('slotStatusGrid');
+
+    if (!status) {
+      infoEl.className = 'slot-info slot-empty';
+      infoEl.textContent = 'ブース表のコマセルを選択してください';
+      gridEl.classList.add('hidden');
+      return;
+    }
+
+    infoEl.className = 'slot-info';
+    infoEl.textContent = status.dateLabel + ' / ' + status.period + '限 / ブース' + status.booth;
+
+    // 配置状況バッジ
+    var teacher  = status.teacherName  || '';
+    var student1 = status.student1Name || '';
+    var student2 = status.student2Name || '';
+
+    setStatusItem('statusTeacher',  '講師: '  + (teacher  || '未配置'), !!teacher);
+    setStatusItem('statusStudent1', '生徒1: ' + (student1 || '未配置'), !!student1);
+    setStatusItem('statusStudent2', '生徒2: ' + (student2 || '未配置'), !!student2);
+
+    var capLabel = student2 ? '1：2（満席）' : (student1 ? '1：2（追加可）' : '未配置');
+    setStatusItem('statusCapacity', '形式: ' + capLabel, !!student1);
+    gridEl.classList.remove('hidden');
+
+    // 繰り返し終了日にコマの日付をセット
+    var dateVal = status.dateLabel.replace(/\//g, '-');
+    document.getElementById('teacherRepeatEnd').value = dateVal;
+    document.getElementById('studentRepeatEnd').value = dateVal;
+  }
+
+  function setStatusItem(id, text, filled) {
+    var el = document.getElementById(id);
+    el.textContent = text;
+    el.className = 'status-item' + (filled ? ' filled' : '');
+  }
+
+  /**
+   * コマ状態からステータスメッセージを表示する。
+   */
+  function applySlotAutoDetect(status) {
+    if (!status) return;
+    var student1 = status.student1Name || '';
+    var student2 = status.student2Name || '';
+
+    if (student2) {
+      setMsg('msgStudent', '既に2名入室済みです（満席）', 'info');
+    } else if (student1) {
+      setMsg('msgStudent', '生徒1が配置済みです。生徒2を選択してください', 'info');
+    } else {
+      setMsg('msgStudent', '', '');
+    }
+  }
+
+  // ─── 講師配置 ─────────────────────────────────────────────
+  function placeTeacher() {
+    var teacher = document.getElementById('teacherName').value;
+    if (!teacher) { setMsg('msgTeacher', '講師を選択してください', 'error'); return; }
+
+    var formData = {
+      teacherName: teacher,
+      endDate:     document.getElementById('teacherRepeatEnd').value.replace(/-/g, '/'),
+      repeat:      document.getElementById('teacherRepeat').value,
+    };
+
+    setMsg('msgTeacher', '処理中...', 'loading');
+    document.getElementById('btnTeacher').disabled = true;
+    google.script.run
+      .withSuccessHandler(function(result) {
+        document.getElementById('btnTeacher').disabled = false;
+        showResultMsg('msgTeacher', result);
+      })
+      .withFailureHandler(function(e) {
+        document.getElementById('btnTeacher').disabled = false;
+        setMsg('msgTeacher', 'エラー: ' + e.message, 'error');
+      })
+      .placeTeacherFromSidebar(formData);
+  }
+
+  // ─── 生徒配置 ─────────────────────────────────────────────
+  function placeStudent() {
+    var student1 = document.getElementById('student1Name').value;
+    if (!student1) { setMsg('msgStudent', '生徒1を選択してください', 'error'); return; }
+
+    var formData = {
+      student1Name:  student1,
+      student1Grade: getGradeFromSelect('student1Name'),
+      subject1:      document.getElementById('subject1').value,
+      student2Name:  document.getElementById('student2Name').value || '',
+      student2Grade: getGradeFromSelect('student2Name'),
+      subject2:      document.getElementById('subject2').value || '',
+      endDate:       document.getElementById('studentRepeatEnd').value.replace(/-/g, '/'),
+      repeat:        document.getElementById('studentRepeat').value,
+    };
+
+    setMsg('msgStudent', '処理中...', 'loading');
+    document.getElementById('btnStudent').disabled = true;
+    google.script.run
+      .withSuccessHandler(function(result) {
+        document.getElementById('btnStudent').disabled = false;
+        showResultMsg('msgStudent', result);
+      })
+      .withFailureHandler(function(e) {
+        document.getElementById('btnStudent').disabled = false;
+        setMsg('msgStudent', 'エラー: ' + e.message, 'error');
+      })
+      .placeScheduleFromSidebar(formData);
+  }
+
+
+  // ─── ユーティリティ ───────────────────────────────────────
+  function populateSelect(id, items) {
+    var sel = document.getElementById(id);
+    sel.innerHTML = '<option value="">-- 選択 --</option>';
+    items.forEach(function(item) {
+      var opt = document.createElement('option');
+      opt.value = item.value;
+      opt.textContent = item.label;
+      sel.appendChild(opt);
+    });
+  }
+
+  function populateStudentSelect(id, students) {
+    var sel = document.getElementById(id);
+    sel.innerHTML = '<option value="">-- 選択 --</option>';
+    students.forEach(function(s) {
+      var opt = document.createElement('option');
+      opt.value = s.name;
+      opt.textContent = s.name;          // 氏名のみ（学年はバッジに分離）
+      opt.dataset.grade = s.grade || '';
+      sel.appendChild(opt);
+    });
+  }
+
+  function updateGrade(selectId, badgeId) {
+    var sel = document.getElementById(selectId);
+    var opt = sel.options[sel.selectedIndex];
+    var grade = (opt && opt.dataset.grade) ? opt.dataset.grade : '-';
+    document.getElementById(badgeId).textContent = '学年: ' + grade;
+  }
+
+  function getGradeFromSelect(selectId) {
+    var sel = document.getElementById(selectId);
+    var opt = sel.options[sel.selectedIndex];
+    return (opt && opt.dataset.grade) ? opt.dataset.grade : '';
+  }
+
+  function setMsg(id, text, type) {
+    var el = document.getElementById(id);
+    if (!text) { el.textContent = ''; el.className = 'msg'; el.innerHTML = ''; return; }
+    el.textContent = text;
+    el.className = 'msg msg-' + type;
+  }
+
+  /**
+   * 配置結果を詳細表示する（placed/skipped リスト対応）。
+   */
+  function showResultMsg(id, result) {
+    var el = document.getElementById(id);
+    if (!result.placed || (!result.placed.length && !result.skipped.length)) {
+      setMsg(id, result.message, result.success ? 'success' : 'error');
+      return;
+    }
+    var html = '<div style="font-weight:bold;margin-bottom:4px;">' + escHtml(result.message) + '</div>';
+    if (result.placed.length > 0) {
+      html += '<div style="color:#137333;font-size:11px;">✓ ' + result.placed.map(escHtml).join('<br>✓ ') + '</div>';
+    }
+    if (result.skipped.length > 0) {
+      html += '<div style="color:#c5221f;font-size:11px;margin-top:2px;">✗ ' + result.skipped.map(escHtml).join('<br>✗ ') + '</div>';
+    }
+    el.className = 'msg ' + (result.success ? 'msg-success' : 'msg-error');
+    el.innerHTML = html;
+  }
+
+  function escHtml(s) {
+    var div = document.createElement('div');
+    div.textContent = s;
+    return div.innerHTML;
+  }
+
+  function fmtDate(d) {
+    var y = d.getFullYear();
+    var m = String(d.getMonth() + 1).padStart(2, '0');
+    var dd = String(d.getDate()).padStart(2, '0');
+    return y + '-' + m + '-' + dd;
+  }
+
+  // ─── コマ削除 ──────────────────────────────────────────────
+  function deleteSlot() {
+    var label = currentSlotStatus
+      ? (currentSlotStatus.dateLabel + ' ' + currentSlotStatus.period + '限 ブース' + currentSlotStatus.booth)
+      : '選択中のコマ';
+    if (!confirm(label + ' を削除しますか？')) return;
+
+    setMsg('msgSlotDelete', '削除中...', 'loading');
+    google.script.run
+      .withSuccessHandler(function(result) {
+        setMsg('msgSlotDelete', result.message, result.success ? 'success' : 'error');
+        if (result.success) refreshSlot();
+      })
+      .withFailureHandler(function(e) { setMsg('msgSlotDelete', 'エラー: ' + e.message, 'error'); })
+      .deleteCurrentSlot();
+  }
+
+  // ─── 週ナビ ───────────────────────────────────────────────
+  function navigateWeek(offset) {
+    var now = new Date();
+    now.setHours(0, 0, 0, 0);
+    var day = now.getDay(); // 0=日
+    var mondayOffset = day === 0 ? -6 : 1 - day;
+    var monday = new Date(now);
+    monday.setDate(monday.getDate() + mondayOffset + (offset * 7));
+    var sunday = new Date(monday);
+    sunday.setDate(sunday.getDate() + 6);
+
+    document.getElementById('displayStart').value = fmtDate(monday);
+    document.getElementById('displayEnd').value   = fmtDate(sunday);
+    updateDisplayAction();
+  }
+
+  // ─── 生徒検索 ─────────────────────────────────────────────
+  function searchStudent() {
+    var name = document.getElementById('searchStudent').value;
+    if (!name) { setMsg('msgSearch', '生徒を選択してください', 'error'); return; }
+
+    setMsg('msgSearch', '検索中...', 'loading');
+    google.script.run
+      .withSuccessHandler(function(result) {
+        setMsg('msgSearch', result.found + '件ハイライトしました', result.found > 0 ? 'success' : 'info');
+      })
+      .withFailureHandler(function(e) { setMsg('msgSearch', 'エラー: ' + e.message, 'error'); })
+      .searchAndHighlightStudent(name);
+  }
+
+  function clearSearchHighlight() {
+    google.script.run
+      .withSuccessHandler(function() { setMsg('msgSearch', 'ハイライトを解除しました', 'success'); })
+      .withFailureHandler(function(e) { setMsg('msgSearch', 'エラー: ' + e.message, 'error'); })
+      .clearHighlight();
+  }
+
+  // ─── 休校日一括削除 ────────────────────────────────────────
+  function bulkDeleteDate() {
+    var dateVal = document.getElementById('bulkDeleteDate').value;
+    if (!dateVal) { setMsg('msgBulkDate', '日付を選択してください', 'error'); return; }
+    if (!confirm(dateVal + ' の全コマを削除しますか？')) return;
+
+    var btn = event.currentTarget;
+    btn.disabled = true; btn.textContent = '削除中...';
+    setMsg('msgBulkDate', '削除中...', 'loading');
+    google.script.run
+      .withSuccessHandler(function(result) {
+        btn.disabled = false; btn.textContent = 'この日の全コマを削除';
+        setMsg('msgBulkDate', result.message, result.success ? 'success' : 'error');
+      })
+      .withFailureHandler(function(e) {
+        btn.disabled = false; btn.textContent = 'この日の全コマを削除';
+        setMsg('msgBulkDate', 'エラー: ' + e.message, 'error');
+      })
+      .bulkDeleteByDate(dateVal);
+  }
+
+  // ─── 講師一括削除 ────────────────────────────────────────────
+  function bulkDeleteTeacher() {
+    var name = document.getElementById('bulkDeleteTeacher').value;
+    var from = document.getElementById('bulkDeleteTeacherFrom').value;
+    if (!name) { setMsg('msgBulkTeacher', '講師を選択してください', 'error'); return; }
+    if (!from) { setMsg('msgBulkTeacher', '削除開始日を選択してください', 'error'); return; }
+    if (!confirm(name + ' の ' + from + ' 以降の全コマを削除しますか？')) return;
+
+    var btn = event.currentTarget;
+    btn.disabled = true; btn.textContent = '削除中...';
+    setMsg('msgBulkTeacher', '削除中...', 'loading');
+    google.script.run
+      .withSuccessHandler(function(result) {
+        btn.disabled = false; btn.textContent = 'この講師の全コマを削除';
+        setMsg('msgBulkTeacher', result.message, result.success ? 'success' : 'error');
+      })
+      .withFailureHandler(function(e) {
+        btn.disabled = false; btn.textContent = 'この講師の全コマを削除';
+        setMsg('msgBulkTeacher', 'エラー: ' + e.message, 'error');
+      })
+      .bulkDeleteTeacherSlots(name, from);
+  }
+
+  // ─── 途中解約一括削除 ──────────────────────────────────────
+  function bulkDeleteStudent() {
+    var name = document.getElementById('bulkDeleteStudent').value;
+    var from = document.getElementById('bulkDeleteFrom').value;
+    if (!name) { setMsg('msgBulkStudent', '生徒を選択してください', 'error'); return; }
+    if (!from) { setMsg('msgBulkStudent', '削除開始日を選択してください', 'error'); return; }
+    if (!confirm(name + ' の ' + from + ' 以降の全コマを削除しますか？')) return;
+
+    var btn = event.currentTarget;
+    btn.disabled = true; btn.textContent = '削除中...';
+    setMsg('msgBulkStudent', '削除中...', 'loading');
+    google.script.run
+      .withSuccessHandler(function(result) {
+        btn.disabled = false; btn.textContent = 'この生徒の全コマを削除';
+        setMsg('msgBulkStudent', result.message, result.success ? 'success' : 'error');
+      })
+      .withFailureHandler(function(e) {
+        btn.disabled = false; btn.textContent = 'この生徒の全コマを削除';
+        setMsg('msgBulkStudent', 'エラー: ' + e.message, 'error');
+      })
+      .bulkDeleteStudentSlots(name, from);
+  }
+</script>
+</body>
+</html>
