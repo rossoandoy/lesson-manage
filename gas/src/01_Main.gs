@@ -8,8 +8,10 @@
  */
 function onOpen(e) {
   SheetHelper.ensureTimezone();
-  SpreadsheetApp.getUi()
-    .createMenu('コマ組メニュー')
+  const ui = SpreadsheetApp.getUi();
+
+  // 教室メニュー（常に表示）
+  ui.createMenu('コマ組メニュー')
     .addItem('コマ組サイドバーを開く', 'openScheduleSidebar')
     .addSeparator()
     .addItem('ブース表を初期化（表示期間を設定）', 'setDisplayRange')
@@ -23,6 +25,22 @@ function onOpen(e) {
     .addSeparator()
     .addItem('印刷シートを同期', 'syncPrintSheet')
     .addToUi();
+
+  // 親シートの場合のみ管理メニューを追加
+  if (AdminSheet.isParent()) {
+    ui.createMenu('管理メニュー')
+      .addItem('教室一覧を同期 (SF→シート)', 'syncClassroomsFromSF')
+      .addItem('新規教室のシートを生成', 'provisionNewClassrooms')
+      .addItem('全教室テンプレート更新', 'updateAllTemplates')
+      .addSeparator()
+      .addItem('バージョン情報を表示', 'showVersionInfo')
+      .addToUi();
+  } else {
+    // 子シートでも初期化メニューを出す（Admin未作成時に使う）
+    ui.createMenu('管理メニュー')
+      .addItem('Admin シートを初期化（親シート化）', 'initAdminSheets')
+      .addToUi();
+  }
 }
 
 /**
@@ -301,4 +319,59 @@ function bulkDeleteTeacherSlots(teacherName, fromDateStr) {
 function syncPrintSheet() {
   PrintSheet.syncFromBoothGrid();
   SpreadsheetApp.getActiveSpreadsheet().toast('印刷シートをブース表から再生成しました');
+}
+
+// ───────── 管理メニューから呼び出されるグローバル関数 ─────────
+
+/**
+ * Admin_Classrooms + Admin_Version シートを初期化して親シート化する。
+ */
+function initAdminSheets() {
+  AdminSheet.initializeClassroomsSheet();
+  AdminSheet.initializeVersionSheet();
+  AdminSheet.addVersion('1.0.0', '初期バージョン', '');
+  SpreadsheetApp.getActiveSpreadsheet().toast(
+    'Admin シートを初期化しました。リロードすると管理メニューが表示されます。'
+  );
+}
+
+/**
+ * 教室一覧をSalesforceから同期する（Phase 2で実装）。
+ */
+function syncClassroomsFromSF() {
+  SpreadsheetApp.getUi().alert('この機能は Phase 2 で実装予定です。');
+}
+
+/**
+ * 新規教室のスプレッドシートを生成する（Phase 3で実装）。
+ */
+function provisionNewClassrooms() {
+  SpreadsheetApp.getUi().alert('この機能は Phase 3 で実装予定です。');
+}
+
+/**
+ * 全教室のテンプレートを更新する（Phase 4で実装）。
+ */
+function updateAllTemplates() {
+  SpreadsheetApp.getUi().alert('この機能は Phase 4 で実装予定です。');
+}
+
+/**
+ * バージョン情報をダイアログで表示する。
+ */
+function showVersionInfo() {
+  const ui = SpreadsheetApp.getUi();
+  const ver = AdminSheet.getLatestVersion();
+  if (!ver) {
+    ui.alert('バージョン情報', 'バージョン情報がありません。', ui.ButtonSet.OK);
+    return;
+  }
+  const dateStr = ver.releaseDate instanceof Date
+    ? Utilities.formatDate(ver.releaseDate, 'Asia/Tokyo', 'yyyy/MM/dd')
+    : String(ver.releaseDate);
+  ui.alert(
+    'バージョン情報',
+    `バージョン: ${ver.version}\nリリース日: ${dateStr}\n説明: ${ver.description}\nコミット: ${ver.commitHash || '(なし)'}`,
+    ui.ButtonSet.OK
+  );
 }

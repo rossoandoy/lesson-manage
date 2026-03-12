@@ -78,6 +78,37 @@ const CONFIG = {
     },
   },
 
+  PARENT: {
+    SHEETS: {
+      ADMIN_CLASSROOMS: 'Admin_Classrooms',
+      ADMIN_VERSION:    'Admin_Version',
+    },
+    ADMIN_CLASSROOMS: {
+      HEADER_ROW: 1,
+      DATA_START_ROW: 2,
+      COLS: {
+        CLASSROOM_ID:    1,
+        CLASSROOM_NAME:  2,
+        MANAGER_ID:      3,
+        MANAGER_NAME:    4,
+        SS_URL:          5,
+        SS_ID:           6,
+        CURRENT_VERSION: 7,
+        SYNC_STATUS:     8,
+      },
+    },
+    ADMIN_VERSION: {
+      HEADER_ROW: 1,
+      DATA_START_ROW: 2,
+      COLS: {
+        VERSION:      1,
+        RELEASE_DATE: 2,
+        DESCRIPTION:  3,
+        COMMIT_HASH:  4,
+      },
+    },
+  },
+
   MASTER: {
     STUDENTS: {
       HEADER_ROW: 1,
