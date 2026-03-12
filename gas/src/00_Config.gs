@@ -12,6 +12,7 @@ const CONFIG = {
     STUDENTS: 'master_students',
     STAFFS:   'master_staffs',
     SUBJECTS: 'master_subjects',
+    DATA_OUTPUT: 'データ出力',
   },
 
   BOOTH_GRID: {
@@ -75,6 +76,22 @@ const CONFIG = {
       ITEM:        4,
       BILLED:      5,
       PAID:        6,
+    },
+  },
+
+  DATA_OUTPUT_SHEET: {
+    HEADER_ROW: 1,
+    DATA_START_ROW: 2,
+    COLS: {
+      DATE:     1,
+      WEEKDAY:  2,
+      PERIOD:   3,
+      BOOTH:    4,
+      TEACHER:  5,
+      STUDENT:  6,
+      GRADE:    7,
+      SUBJECT:  8,
+      CAPACITY: 9,
     },
   },
 

@@ -916,7 +916,7 @@
         btn.disabled = false; btn.textContent = 'この講師の全コマを削除';
         setMsg('msgBulkTeacher', 'エラー: ' + e.message, 'error');
       })
-      .bulkDeleteTeacherSlots(name, from);
+      .bulkDeleteByTeacher(name, from);
   }
 
   // ─── 途中解約一括削除 ──────────────────────────────────────
@@ -939,7 +939,7 @@
         btn.disabled = false; btn.textContent = 'この生徒の全コマを削除';
         setMsg('msgBulkStudent', 'エラー: ' + e.message, 'error');
       })
-      .bulkDeleteStudentSlots(name, from);
+      .bulkDeleteByStudent(name, from);
   }
 </script>
 </body>

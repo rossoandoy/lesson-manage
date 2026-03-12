@@ -24,6 +24,9 @@ function onOpen(e) {
     .addItem('tran シートを初期化', 'initTranSheet')
     .addSeparator()
     .addItem('印刷シートを同期', 'syncPrintSheet')
+    .addSeparator()
+    .addItem('データ出力（フィルタ付き）', 'showDataOutputDialog')
+    .addItem('ブース表を印刷用に表示', 'showPrintViewDialog')
     .addToUi();
 
   // 親シートの場合のみ管理メニューを追加
@@ -299,7 +302,7 @@ function bulkDeleteByDate(dateStr) {
  * @param {string} fromDateStr 'YYYY-MM-DD'
  * @returns {{ success:boolean, message:string, count:number }}
  */
-function bulkDeleteStudentSlots(studentName, fromDateStr) {
+function bulkDeleteByStudent(studentName, fromDateStr) {
   return ScheduleService.bulkDeleteByStudent(studentName, fromDateStr);
 }
 
@@ -309,7 +312,7 @@ function bulkDeleteStudentSlots(studentName, fromDateStr) {
  * @param {string} fromDateStr 'YYYY-MM-DD'
  * @returns {{ success:boolean, message:string, count:number }}
  */
-function bulkDeleteTeacherSlots(teacherName, fromDateStr) {
+function bulkDeleteByTeacher(teacherName, fromDateStr) {
   return ScheduleService.bulkDeleteByTeacher(teacherName, fromDateStr);
 }
 
@@ -319,6 +322,56 @@ function bulkDeleteTeacherSlots(teacherName, fromDateStr) {
 function syncPrintSheet() {
   PrintSheet.syncFromBoothGrid();
   SpreadsheetApp.getActiveSpreadsheet().toast('印刷シートをブース表から再生成しました');
+}
+
+// ───────── データ出力・印刷ビューのグローバル関数 ─────────
+
+/**
+ * データ出力ダイアログを表示する。
+ */
+function showDataOutputDialog() {
+  DataOutput.showFilterDialog();
+}
+
+/**
+ * ブース表印刷ビューダイアログを表示する。
+ */
+function showPrintViewDialog() {
+  PrintView.showPrintDialog();
+}
+
+/**
+ * フィルタ条件付きでデータ出力シートを生成する（ダイアログから呼び出し）。
+ * @param {Object} filter { studentName, teacherName, fromDate, toDate }
+ */
+function runDataOutput(filter) {
+  DataOutput.generate(filter);
+}
+
+/**
+ * 印刷ビューを生成する（ダイアログから呼び出し）。
+ * @param {string} fromDate 'YYYY-MM-DD'
+ * @param {string} toDate   'YYYY-MM-DD'
+ */
+function runPrintView(fromDate, toDate) {
+  PrintView.generatePrintView(fromDate, toDate);
+}
+
+/**
+ * コマ組ダイアログの初期化データを返す。
+ * @returns {Object}
+ */
+function getDialogInitData() {
+  return ScheduleService.getDialogInitData();
+}
+
+/**
+ * コマ組ダイアログのフォーム送信を処理する。
+ * @param {Object} formData
+ * @returns {Object}
+ */
+function processScheduleDialogSubmit(formData) {
+  return ScheduleService.processSubmit(formData);
 }
 
 // ───────── 管理メニューから呼び出されるグローバル関数 ─────────

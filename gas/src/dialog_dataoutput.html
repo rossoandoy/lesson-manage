@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>データ出力</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 13px;
+      background: #f8f9fa;
+      color: #333;
+      padding: 20px;
+    }
+    .description {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 16px;
+      line-height: 1.5;
+    }
+    .form-group {
+      margin-bottom: 14px;
+    }
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: bold;
+      color: #555;
+      margin-bottom: 4px;
+    }
+    input[type="text"], input[type="date"] {
+      width: 100%;
+      padding: 7px 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 13px;
+      background: #fff;
+      color: #333;
+    }
+    input:focus {
+      outline: none;
+      border-color: #4285f4;
+      box-shadow: 0 0 0 2px rgba(66,133,244,0.2);
+    }
+    .date-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .message-area {
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      margin-bottom: 10px;
+      display: none;
+    }
+    .message-area.error {
+      background: #f8d7da;
+      border: 1px solid #f5c2c7;
+      color: #842029;
+      display: block;
+    }
+    .message-area.success {
+      background: #d1e7dd;
+      border: 1px solid #a3cfbb;
+      color: #0f5132;
+      display: block;
+    }
+    .button-row {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 16px;
+    }
+    button {
+      padding: 8px 20px;
+      border: none;
+      border-radius: 4px;
+      font-size: 13px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    #btn-cancel {
+      background: #fff;
+      border: 1px solid #ccc;
+      color: #555;
+    }
+    #btn-cancel:hover { background: #f5f5f5; }
+    #btn-generate {
+      background: #1a73e8;
+      color: #fff;
+    }
+    #btn-generate:hover { background: #1558b0; }
+    #btn-generate:disabled {
+      background: #a8c7fa;
+      cursor: not-allowed;
+    }
+    .loading { opacity: 0.5; pointer-events: none; }
+  </style>
+</head>
+<body>
+  <div class="description">
+    ブース表の全コマをリスト化します。条件を指定すると絞り込めます。<br>
+    すべて空欄にすると全件出力します。
+  </div>
+
+  <div class="form-group">
+    <label>生徒名（部分一致）</label>
+    <input type="text" id="student-name" placeholder="例: 山田">
+  </div>
+
+  <div class="form-group">
+    <label>講師名（部分一致）</label>
+    <input type="text" id="teacher-name" placeholder="例: 田中">
+  </div>
+
+  <div class="date-row">
+    <div class="form-group">
+      <label>開始日</label>
+      <input type="date" id="from-date">
+    </div>
+    <div class="form-group">
+      <label>終了日</label>
+      <input type="date" id="to-date">
+    </div>
+  </div>
+
+  <div class="message-area" id="message-area"></div>
+
+  <div class="button-row">
+    <button id="btn-cancel" onclick="onCancel()">キャンセル</button>
+    <button id="btn-generate" onclick="onGenerate()">生成</button>
+  </div>
+
+<script>
+  function onGenerate() {
+    clearMessage();
+    var filter = {
+      studentName: document.getElementById('student-name').value.trim(),
+      teacherName: document.getElementById('teacher-name').value.trim(),
+      fromDate: document.getElementById('from-date').value || '',
+      toDate: document.getElementById('to-date').value || '',
+    };
+
+    // 片方だけ指定された場合のチェック
+    if ((filter.fromDate && !filter.toDate) || (!filter.fromDate && filter.toDate)) {
+      showMessage('期間は開始日と終了日の両方を指定してください', 'error');
+      return;
+    }
+
+    setLoading(true);
+    google.script.run
+      .withSuccessHandler(onSuccess)
+      .withFailureHandler(onError)
+      .runDataOutput(filter);
+  }
+
+  function onSuccess() {
+    setLoading(false);
+    showMessage('データ出力シートを生成しました', 'success');
+    setTimeout(function() { google.script.host.close(); }, 1200);
+  }
+
+  function onError(err) {
+    setLoading(false);
+    showMessage('エラー: ' + err.message, 'error');
+  }
+
+  function onCancel() {
+    google.script.host.close();
+  }
+
+  function showMessage(msg, type) {
+    var el = document.getElementById('message-area');
+    el.textContent = msg;
+    el.className = 'message-area ' + (type || '');
+  }
+
+  function clearMessage() {
+    var el = document.getElementById('message-area');
+    el.className = 'message-area';
+    el.textContent = '';
+  }
+
+  function setLoading(loading) {
+    document.getElementById('btn-generate').disabled = loading;
+    document.body.classList.toggle('loading', loading);
+  }
+</script>
+</body>
+</html>
