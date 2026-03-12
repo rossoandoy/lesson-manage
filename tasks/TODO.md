@@ -52,9 +52,17 @@
 
 ---
 
+## 親スプレッドシート構造化（Phase 4 より先行）
+
+- [ ] 親シート構造 SPEC 確定 — SPEC の「親スプレッドシート構造」を実装可能なレベルまで確定
+- [ ] 同一プロジェクト評価 — 現在のテンプレートを親シート（テンプレート兼管理）として運用する適切性を評価し、PLAN/SPEC に結論を記載
+- [ ] 親シート 4 シート作成 — Template_Main（既存ひな形）/ Template_Cover / Admin_Version / Admin_Classrooms を親スプレッドシートに用意
+
+---
+
 ## Phase 4: Salesforce連携
 
-- [ ] 4.1 OAuth JWT Bearer認証
+- [ ] 4.1 Salesforce Client Credentials 認証
 - [ ] 4.2 SOQLクエリ
 - [ ] 4.3 URL書き戻し（PATCH）
 - [ ] 4.4 tranシート同期
