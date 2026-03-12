@@ -31,7 +31,7 @@ const ReportSheet = {
 
     const stats = this.aggregateByMonth(studentName);
     const sheet = SheetHelper.getOrCreateSheet(CONFIG.SHEETS.REPORT);
-    this.writeRightHalf(sheet, stats);
+    this.writeRightHalf(sheet, stats, studentName);
     this.writeTranReferences(sheet, studentName);
 
     ui.alert(`「${studentName}」の回数報告を更新しました`);
@@ -70,8 +70,9 @@ const ReportSheet = {
    * 集計値を右半分（F〜J列）に書き込む。
    * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet
    * @param {Object} stats aggregateByMonth の戻り値
+   * @param {string} [studentName] 前年度累計を加算する場合に指定
    */
-  writeRightHalf(sheet, stats) {
+  writeRightHalf(sheet, stats, studentName) {
     const r = CONFIG.REPORT_SHEET;
     const c = r.COLS_RIGHT;
 
@@ -100,13 +101,26 @@ const ReportSheet = {
       totalTransfer += s.transfer;
     });
 
-    // 合計行
+    // 今年度合計行
+    const totalRow = r.TOTAL_ROW;
+    sheet.getRange(totalRow, c.PLAN).setValue(totalPlan);
+    sheet.getRange(totalRow, c.ATTENDED).setValue(totalAttended);
+    sheet.getRange(totalRow, c.ABSENT).setValue(totalAbsent);
+    sheet.getRange(totalRow, c.TRANSFER).setValue(totalTransfer);
+    sheet.getRange(totalRow, c.BALANCE).setValue(totalPlan - totalAttended);
+
+    // 前年度累計を加算して総合計行に書き込み
+    const prev = studentName ? this.getPrevYearTotals(studentName) : { plan:0, attended:0, absent:0, transfer:0 };
     const grandRow = r.GRAND_TOTAL_ROW;
-    sheet.getRange(grandRow, c.PLAN).setValue(totalPlan);
-    sheet.getRange(grandRow, c.ATTENDED).setValue(totalAttended);
-    sheet.getRange(grandRow, c.ABSENT).setValue(totalAbsent);
-    sheet.getRange(grandRow, c.TRANSFER).setValue(totalTransfer);
-    sheet.getRange(grandRow, c.BALANCE).setValue(totalPlan - totalAttended);
+    const grandPlan     = totalPlan     + prev.plan;
+    const grandAttended = totalAttended + prev.attended;
+    const grandAbsent   = totalAbsent   + prev.absent;
+    const grandTransfer = totalTransfer + prev.transfer;
+    sheet.getRange(grandRow, c.PLAN).setValue(grandPlan);
+    sheet.getRange(grandRow, c.ATTENDED).setValue(grandAttended);
+    sheet.getRange(grandRow, c.ABSENT).setValue(grandAbsent);
+    sheet.getRange(grandRow, c.TRANSFER).setValue(grandTransfer);
+    sheet.getRange(grandRow, c.BALANCE).setValue(grandPlan - grandAttended);
   },
 
   /**
@@ -130,6 +144,104 @@ const ReportSheet = {
         `${tranSheet}!$B:$B&${tranSheet}!$C:$C,0)),"")`;
       sheet.getRange(row, r.COLS_LEFT.STUDENT_ID).setFormula(formula);
     });
+  },
+
+  /**
+   * 前年度累計を ScriptProperties に保存する。
+   * @param {string} studentName
+   * @param {{ plan:number, attended:number, absent:number, transfer:number }} totals
+   */
+  setPrevYearTotals(studentName, totals) {
+    const props = PropertiesService.getScriptProperties();
+    props.setProperty('PREV_YEAR_TOTALS_' + studentName, JSON.stringify(totals));
+  },
+
+  /**
+   * 前年度累計を ScriptProperties から取得する。
+   * @param {string} studentName
+   * @returns {{ plan:number, attended:number, absent:number, transfer:number }}
+   */
+  getPrevYearTotals(studentName) {
+    const props = PropertiesService.getScriptProperties();
+    const raw = props.getProperty('PREV_YEAR_TOTALS_' + studentName);
+    if (!raw) return { plan: 0, attended: 0, absent: 0, transfer: 0 };
+    try {
+      return JSON.parse(raw);
+    } catch (e) {
+      return { plan: 0, attended: 0, absent: 0, transfer: 0 };
+    }
+  },
+
+  /**
+   * メニューから前年度累計を設定する。
+   */
+  promptPrevYearTotals() {
+    const ui = SpreadsheetApp.getUi();
+    const students = this._getStudentNames();
+    if (students.length === 0) {
+      ui.alert('master_students に生徒データがありません');
+      return;
+    }
+
+    const nameResp = ui.prompt('前年度累計設定', `生徒名を入力:\n${students.join(', ')}`, ui.ButtonSet.OK_CANCEL);
+    if (nameResp.getSelectedButton() !== ui.Button.OK) return;
+    const studentName = nameResp.getResponseText().trim();
+    if (!students.includes(studentName)) {
+      ui.alert(`「${studentName}」は生徒リストにありません`);
+      return;
+    }
+
+    const current = this.getPrevYearTotals(studentName);
+    const valResp = ui.prompt(
+      '前年度累計設定',
+      `${studentName} の前年度累計を入力（カンマ区切り: 予定,出席,欠席,振替）\n現在値: ${current.plan},${current.attended},${current.absent},${current.transfer}`,
+      ui.ButtonSet.OK_CANCEL
+    );
+    if (valResp.getSelectedButton() !== ui.Button.OK) return;
+
+    const parts = valResp.getResponseText().split(',').map(s => parseInt(s.trim()) || 0);
+    if (parts.length < 4) {
+      ui.alert('4つの数値をカンマ区切りで入力してください');
+      return;
+    }
+
+    this.setPrevYearTotals(studentName, {
+      plan: parts[0], attended: parts[1], absent: parts[2], transfer: parts[3],
+    });
+    ui.alert(`${studentName} の前年度累計を保存しました`);
+  },
+
+  /**
+   * 全生徒一括でレポートを生成する。生徒ごとに「回数報告_生徒名」シートを作成。
+   */
+  generateAllReports() {
+    const students = this._getStudentNames();
+    if (students.length === 0) {
+      SpreadsheetApp.getUi().alert('master_students に生徒データがありません');
+      return;
+    }
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    students.forEach((studentName, idx) => {
+      ss.toast(`${idx + 1}/${students.length}: ${studentName} のレポートを生成中...`);
+      const sheetName = '回数報告_' + studentName;
+      const sheet = SheetHelper.getOrCreateSheet(sheetName);
+
+      // 既存データクリア
+      sheet.clear();
+
+      // ヘッダー
+      sheet.getRange(1, 1).setValue('生徒名');
+      sheet.getRange(1, 2).setValue(studentName);
+      sheet.getRange(1, 1, 1, 2).setFontWeight('bold');
+
+      const stats = this.aggregateByMonth(studentName);
+      this.writeRightHalf(sheet, stats, studentName);
+      this.writeTranReferences(sheet, studentName);
+    });
+
+    ss.toast(`全${students.length}名のレポートを生成しました`);
+    SpreadsheetApp.getUi().alert(`${students.length}名のレポートを生成しました`);
   },
 
   // --- プライベートヘルパー ---
