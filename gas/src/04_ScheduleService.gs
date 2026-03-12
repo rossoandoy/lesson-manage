@@ -418,6 +418,49 @@ const ScheduleService = {
   },
 
   /**
+   * 出欠を記録する（サイドバーから呼び出し）。
+   * @param {string} dateLabel 'YYYY/MM/DD'
+   * @param {number} period
+   * @param {number} booth
+   * @param {string} studentName
+   * @param {string} status '出席' | '欠席' | '振替'
+   * @param {string} [transferToDate] 振替先日付（振替時のみ）
+   * @returns {{ success:boolean, message:string }}
+   */
+  markAttendance(dateLabel, period, booth, studentName, status, transferToDate) {
+    try {
+      // 印刷シートの出欠列を更新
+      PrintSheet.setAttendance(dateLabel, period, booth, studentName, status);
+
+      // 振替の場合: 振替先とリンク
+      if (status === '振替' && transferToDate) {
+        const normalizedTo = transferToDate.replace(/-/g, '/');
+        const fromSlot = { dateLabel, period, booth };
+        // 振替先のコマ情報を印刷シートから検索（同じ生徒の別日コマ）
+        const rows = PrintSheet.findByStudent(studentName);
+        const c = CONFIG.PRINT_SHEET.COLS;
+        const toRow = rows.find(r => {
+          const d = r.data[c.DATE - 1];
+          const dl = (d instanceof Date) ? SheetHelper.formatDate(d) : '';
+          return dl === normalizedTo;
+        });
+        if (toRow) {
+          const toSlot = {
+            dateLabel: normalizedTo,
+            period: Number(toRow.data[c.PERIOD - 1]),
+            booth:  Number(toRow.data[c.BOOTH - 1]),
+          };
+          PrintSheet.linkTransfer(fromSlot, toSlot, studentName);
+        }
+      }
+
+      return { success: true, message: `${studentName} の出欠を「${status}」に更新しました` };
+    } catch (e) {
+      return { success: false, message: 'エラー: ' + e.message };
+    }
+  },
+
+  /**
    * 配置結果メッセージを構築する。
    * @param {string[]} placed  成功リスト
    * @param {string[]} skipped スキップリスト

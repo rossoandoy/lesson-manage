@@ -314,6 +314,22 @@
       </button>
     </div>
     <div id="msgSlotDelete"></div>
+
+    <!-- 出欠コマンド -->
+    <div class="divider"></div>
+    <div class="section-title">出欠記録</div>
+    <div class="hint">選択中のコマの生徒1に対して出欠を記録します</div>
+    <div style="display:flex;gap:4px;margin-top:4px;">
+      <button class="btn-primary btn-sm" onclick="markAttendanceAction('出席')" style="flex:1;">出席</button>
+      <button class="btn-secondary btn-sm" onclick="markAttendanceAction('欠席')" style="flex:1;">欠席</button>
+      <button class="btn-secondary btn-sm" onclick="showTransferInput()" style="flex:1;">振替</button>
+    </div>
+    <div id="transferInputArea" class="hidden" style="margin-top:6px;">
+      <label>振替先日付</label>
+      <input type="date" id="transferToDate">
+      <button class="btn-primary btn-sm" onclick="markAttendanceAction('振替')" style="margin-top:4px;">振替を記録</button>
+    </div>
+    <div id="msgAttendance"></div>
   </div>
 
   <!-- 講師配置 -->
@@ -917,6 +933,53 @@
         setMsg('msgBulkTeacher', 'エラー: ' + e.message, 'error');
       })
       .bulkDeleteByTeacher(name, from);
+  }
+
+  // ─── 出欠記録 ──────────────────────────────────────────────
+  function showTransferInput() {
+    document.getElementById('transferInputArea').classList.remove('hidden');
+  }
+
+  function markAttendanceAction(status) {
+    if (!currentSlotStatus) {
+      setMsg('msgAttendance', 'ブース表のコマセルを選択してください', 'error');
+      return;
+    }
+    var studentName = currentSlotStatus.student1Name;
+    if (!studentName) {
+      setMsg('msgAttendance', '生徒が配置されていません', 'error');
+      return;
+    }
+
+    var transferToDate = '';
+    if (status === '振替') {
+      transferToDate = document.getElementById('transferToDate').value;
+      if (!transferToDate) {
+        setMsg('msgAttendance', '振替先日付を入力してください', 'error');
+        return;
+      }
+      transferToDate = transferToDate.replace(/-/g, '/');
+    }
+
+    setMsg('msgAttendance', '処理中...', 'loading');
+    google.script.run
+      .withSuccessHandler(function(result) {
+        setMsg('msgAttendance', result.message, result.success ? 'success' : 'error');
+        if (result.success) {
+          document.getElementById('transferInputArea').classList.add('hidden');
+        }
+      })
+      .withFailureHandler(function(e) {
+        setMsg('msgAttendance', 'エラー: ' + e.message, 'error');
+      })
+      .markAttendance(
+        currentSlotStatus.dateLabel,
+        currentSlotStatus.period,
+        currentSlotStatus.booth,
+        studentName,
+        status,
+        transferToDate
+      );
   }
 
   // ─── 途中解約一括削除 ──────────────────────────────────────

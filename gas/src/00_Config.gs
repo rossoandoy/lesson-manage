@@ -51,6 +51,8 @@ const CONFIG = {
       SUBJECT:    8,
       CAPACITY:   9,
       ATTENDANCE: 10,
+      TRANSFER_FROM: 11,
+      TRANSFER_TO:   12,
     },
     ATTENDANCE_VALUES: ['出席', '欠席', '振替'],
   },
