@@ -130,6 +130,113 @@ const PrintSheet = {
   },
 
   /**
+   * 印刷シートのヘッダー行を初期化する。
+   */
+  initializeHeader() {
+    const sheet = SheetHelper.getOrCreateSheet(CONFIG.SHEETS.PRINT);
+    const c = CONFIG.PRINT_SHEET;
+    const cols = c.COLS;
+    const headers = [
+      [cols.DATE,          '日付'],
+      [cols.WEEKDAY,       '曜日'],
+      [cols.PERIOD,        '時限'],
+      [cols.BOOTH,         'ブース'],
+      [cols.TEACHER,       '講師'],
+      [cols.STUDENT,       '生徒'],
+      [cols.GRADE,         '学年'],
+      [cols.SUBJECT,       '教科'],
+      [cols.CAPACITY,      '形式'],
+      [cols.ATTENDANCE,    '出欠'],
+      [cols.TRANSFER_FROM, '振替元日付'],
+      [cols.TRANSFER_TO,   '振替先日付'],
+    ];
+    headers.forEach(([col, label]) => {
+      sheet.getRange(c.HEADER_ROW, col).setValue(label);
+    });
+    sheet.getRange(c.HEADER_ROW, 1, 1, 12).setFontWeight('bold');
+    SpreadsheetApp.getActiveSpreadsheet().toast('印刷シートのヘッダーを初期化しました');
+  },
+
+  /**
+   * 日付・時限・ブース・生徒名で印刷シートの行を特定する。
+   * @param {string} dateLabel 'YYYY/MM/DD'
+   * @param {number} period
+   * @param {number} booth
+   * @param {string} studentName
+   * @returns {{ row:number, data:any[] } | null}
+   */
+  findBySlotAndStudent(dateLabel, period, booth, studentName) {
+    const sheet = this._getSheet();
+    const c = CONFIG.PRINT_SHEET.COLS;
+    const lastRow = sheet.getLastRow();
+    if (lastRow < CONFIG.PRINT_SHEET.DATA_START_ROW) return null;
+
+    const numRows = lastRow - CONFIG.PRINT_SHEET.DATA_START_ROW + 1;
+    const values = SheetHelper.batchGetValues(
+      sheet, CONFIG.PRINT_SHEET.DATA_START_ROW, 1, numRows, 12
+    );
+
+    for (let i = 0; i < values.length; i++) {
+      const row = values[i];
+      const dateVal = row[c.DATE - 1];
+      const rowDateLabel = (dateVal instanceof Date) ? SheetHelper.formatDate(dateVal) : '';
+      if (
+        rowDateLabel === dateLabel &&
+        Number(row[c.PERIOD - 1]) === period &&
+        Number(row[c.BOOTH - 1]) === booth &&
+        row[c.STUDENT - 1] === studentName
+      ) {
+        return { row: CONFIG.PRINT_SHEET.DATA_START_ROW + i, data: row };
+      }
+    }
+    return null;
+  },
+
+  /**
+   * 振替元と振替先の行を相互リンクする。
+   * @param {{ dateLabel:string, period:number, booth:number }} fromSlot
+   * @param {{ dateLabel:string, period:number, booth:number }} toSlot
+   * @param {string} studentName
+   */
+  linkTransfer(fromSlot, toSlot, studentName) {
+    const sheet = this._getSheet();
+    const c = CONFIG.PRINT_SHEET.COLS;
+
+    // 振替元の行を検索 → L列（振替先日付）にセット
+    const fromRow = this.findBySlotAndStudent(
+      fromSlot.dateLabel, fromSlot.period, fromSlot.booth, studentName
+    );
+    if (fromRow) {
+      sheet.getRange(fromRow.row, c.TRANSFER_TO).setValue(toSlot.dateLabel);
+    }
+
+    // 振替先の行を検索 → K列（振替元日付）にセット
+    const toRow = this.findBySlotAndStudent(
+      toSlot.dateLabel, toSlot.period, toSlot.booth, studentName
+    );
+    if (toRow) {
+      sheet.getRange(toRow.row, c.TRANSFER_FROM).setValue(fromSlot.dateLabel);
+    }
+  },
+
+  /**
+   * 出欠を更新する。
+   * @param {string} dateLabel
+   * @param {number} period
+   * @param {number} booth
+   * @param {string} studentName
+   * @param {string} status '出席' | '欠席' | '振替'
+   */
+  setAttendance(dateLabel, period, booth, studentName, status) {
+    const sheet = this._getSheet();
+    const c = CONFIG.PRINT_SHEET.COLS;
+    const found = this.findBySlotAndStudent(dateLabel, period, booth, studentName);
+    if (found) {
+      sheet.getRange(found.row, c.ATTENDANCE).setValue(status);
+    }
+  },
+
+  /**
    * 生徒名で行を検索する。
    * @param {string} studentName
    * @returns {Array<{ row:number, data:any[] }>}

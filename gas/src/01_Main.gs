@@ -17,12 +17,15 @@ function onOpen(e) {
     .addItem('ブース表を初期化（表示期間を設定）', 'setDisplayRange')
     .addSeparator()
     .addItem('回数報告を生成', 'runReport')
+    .addItem('全生徒レポート一括生成', 'runAllReports')
+    .addItem('前年度累計を設定', 'setPrevYearTotals')
     .addSeparator()
     .addItem('教科マスタを初期化', 'initSubjectMaster')
     .addItem('講師マスタを初期化', 'initStaffMaster')
     .addItem('生徒マスタを初期化', 'initStudentMaster')
     .addItem('tran シートを初期化', 'initTranSheet')
     .addSeparator()
+    .addItem('印刷シートヘッダーを初期化', 'initPrintSheetHeader')
     .addItem('印刷シートを同期', 'syncPrintSheet')
     .addSeparator()
     .addItem('データ出力（フィルタ付き）', 'showDataOutputDialog')
@@ -317,11 +320,46 @@ function bulkDeleteByTeacher(teacherName, fromDateStr) {
 }
 
 /**
+ * 印刷シートのヘッダーを初期化する。
+ */
+function initPrintSheetHeader() {
+  PrintSheet.initializeHeader();
+}
+
+/**
  * ブース表から印刷シートを再生成する。
  */
 function syncPrintSheet() {
   PrintSheet.syncFromBoothGrid();
   SpreadsheetApp.getActiveSpreadsheet().toast('印刷シートをブース表から再生成しました');
+}
+
+/**
+ * 全生徒一括レポートを生成する。
+ */
+function runAllReports() {
+  ReportSheet.generateAllReports();
+}
+
+/**
+ * 前年度累計を設定する。
+ */
+function setPrevYearTotals() {
+  ReportSheet.promptPrevYearTotals();
+}
+
+/**
+ * 出欠を記録する（サイドバーから呼び出し）。
+ * @param {string} dateLabel
+ * @param {number} period
+ * @param {number} booth
+ * @param {string} studentName
+ * @param {string} status
+ * @param {string} [transferToDate]
+ * @returns {{ success:boolean, message:string }}
+ */
+function markAttendance(dateLabel, period, booth, studentName, status, transferToDate) {
+  return ScheduleService.markAttendance(dateLabel, period, booth, studentName, status, transferToDate);
 }
 
 // ───────── データ出力・印刷ビューのグローバル関数 ─────────

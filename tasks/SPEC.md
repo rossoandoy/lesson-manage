@@ -76,6 +76,76 @@ function initStudentMaster() → void
 
 ---
 
+## Phase 3: 集計・レポート強化
+
+### P3.1 振替追跡（元/先ペアリング）
+**要件源**: Feedback — 振替元と振替先の紐付けが必要
+**変更ファイル**: `00_Config.gs`, `05_PrintSheet.gs`, `04_ScheduleService.gs`, `01_Main.gs`
+
+**印刷シート列追加**:
+- K列 (11): `振替元日付` — この行が振替先の場合、元の授業日
+- L列 (12): `振替先日付` — この行が振替元の場合、振替先の授業日
+
+**関数**:
+- `PrintSheet.linkTransfer(fromSlot, toSlot, studentName)` — 印刷シートで両方の行を検索し、K/L列を相互記録
+- `PrintSheet.findBySlotAndStudent(dateLabel, period, booth, studentName)` — 印刷シートの行を特定するヘルパー
+
+**振替フロー**:
+1. サイドバーで出欠を「振替」にマーク → 振替先日付を入力
+2. 印刷シートの元行の L列（振替先日付）に振替先日を記録
+3. 振替先コマが配置済みなら、先行の K列（振替元日付）に元日を記録
+
+**テスト**: 振替マーク後、印刷シートのK/L列に日付が相互記録されていること
+
+---
+
+### P3.2 前年度累計保持
+**要件源**: 年度跨ぎでの累計管理
+**変更ファイル**: `06_ReportSheet.gs`, `01_Main.gs`
+
+**方式**: ScriptProperties に JSON 保存（行番号変更なし）
+- キー: `PREV_YEAR_TOTALS_{studentName}`
+- 値: `{ plan:number, attended:number, absent:number, transfer:number }`
+
+**関数**:
+- `ReportSheet.setPrevYearTotals(studentName, totals)` — prompt で手動入力 → ScriptProperties に保存
+- `ReportSheet.getPrevYearTotals(studentName)` — 取得（なければゼロ）
+- `writeRightHalf()` 変更 — GRAND_TOTAL_ROW に前年度分を加算
+
+**テスト**: 前年度累計を設定後、レポート生成で GRAND_TOTAL_ROW に加算されること
+
+---
+
+### P3.3 全生徒一括レポート生成
+**要件源**: 1生徒ずつ prompt 入力が煩雑
+**変更ファイル**: `06_ReportSheet.gs`, `01_Main.gs`
+
+**関数**:
+- `ReportSheet.generateAllReports()` — 全生徒を取得し、生徒ごとに `回数報告_生徒名` シートを作成して集計を書き込み
+
+**出力**: 生徒ごとに別シート（`回数報告_生徒名`）
+**テスト**: メニュー実行で全生徒分のシートが生成されること
+
+---
+
+### P3.4 出欠コマンド（ブース表から）
+**要件源**: ブース表からの出欠操作
+**変更ファイル**: `04_ScheduleService.gs`, `01_Main.gs`, `sidebar_schedule.html`
+
+**UI**: サイドバーの「選択中のコマ」セクションに出欠ボタン3個を追加
+- [出席] [欠席] [振替]
+- 振替選択時: 振替先日付の入力フィールドを表示
+
+**関数**:
+- `ScheduleService.markAttendance(dateLabel, period, booth, studentName, status, transferToDate?)`
+  1. 印刷シートで該当行を検索
+  2. 出欠列に値をセット
+  3. status === '振替' の場合: `PrintSheet.linkTransfer()` を呼出
+
+**テスト**: サイドバーで出席/欠席/振替を選択 → 印刷シートの出欠列に反映されること
+
+---
+
 ## Phase 1（仕様は実装開始前に記述）
 
 ### P1.1 週表示ナビ
