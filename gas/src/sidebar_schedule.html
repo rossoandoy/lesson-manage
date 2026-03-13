@@ -318,7 +318,7 @@
     <!-- 出欠コマンド -->
     <div class="divider"></div>
     <div class="section-title">出欠記録</div>
-    <div class="hint">選択中のコマの生徒1に対して出欠を記録します</div>
+    <div class="hint">選択中の座席の生徒に対して出欠を記録します</div>
     <div style="display:flex;gap:4px;margin-top:4px;">
       <button class="btn-primary btn-sm" onclick="markAttendanceAction('出席')" style="flex:1;">出席</button>
       <button class="btn-secondary btn-sm" onclick="markAttendanceAction('欠席')" style="flex:1;">欠席</button>
@@ -357,40 +357,21 @@
   <!-- 生徒配置 -->
   <div class="section">
     <div class="section-title">👤 生徒配置</div>
+    <div class="slot-info" id="seatInfo" style="margin-bottom:6px;">座席: -</div>
 
-    <!-- 生徒1 -->
-    <div>
-      <div class="row2">
-        <div>
-          <label>生徒1</label>
-          <select id="student1Name" onchange="updateGrade('student1Name','grade1')">
-            <option value="">-- 選択 --</option>
-          </select>
-        </div>
-        <div>
-          <label>教科</label>
-          <select id="subject1"><option value="">-- 選択 --</option></select>
-        </div>
+    <div class="row2">
+      <div>
+        <label>生徒</label>
+        <select id="studentName" onchange="updateGrade('studentName','gradebadge')">
+          <option value="">-- 選択 --</option>
+        </select>
       </div>
-      <div class="grade-badge" id="grade1">学年: -</div>
-    </div>
-
-    <!-- 生徒2（常に表示、入力すると自動で1:2になる） -->
-    <div id="student2Section">
-      <div class="row2">
-        <div>
-          <label>生徒2 <span class="hint">（1:2の場合のみ）</span></label>
-          <select id="student2Name" onchange="updateGrade('student2Name','grade2')">
-            <option value="">-- 選択 --</option>
-          </select>
-        </div>
-        <div>
-          <label>教科</label>
-          <select id="subject2"><option value="">-- 選択 --</option></select>
-        </div>
+      <div>
+        <label>教科</label>
+        <select id="subjectSel"><option value="">-- 選択 --</option></select>
       </div>
-      <div class="grade-badge" id="grade2">学年: -</div>
     </div>
+    <div class="grade-badge" id="gradebadge">学年: -</div>
 
     <div class="row2">
       <div>
@@ -509,10 +490,8 @@
 
     // プルダウン生成
     populateSelect('teacherName', data.teachers.map(function(t) { return { value: t.name, label: t.name }; }));
-    populateStudentSelect('student1Name', data.students);
-    populateStudentSelect('student2Name', data.students);
-    populateSelect('subject1', data.subjects.map(function(s) { return { value: s, label: s }; }));
-    populateSelect('subject2', data.subjects.map(function(s) { return { value: s, label: s }; }));
+    populateStudentSelect('studentName', data.students);
+    populateSelect('subjectSel', data.subjects.map(function(s) { return { value: s, label: s }; }));
 
     // 検索・一括削除用プルダウン
     populateStudentSelect('searchStudent', data.students);
@@ -651,16 +630,31 @@
   function showSlotStatus(status) {
     var infoEl  = document.getElementById('slotInfo');
     var gridEl  = document.getElementById('slotStatusGrid');
+    var seatEl  = document.getElementById('seatInfo');
 
     if (!status) {
       infoEl.className = 'slot-info slot-empty';
       infoEl.textContent = 'ブース表のコマセルを選択してください';
       gridEl.classList.add('hidden');
+      seatEl.textContent = '座席: -';
+      seatEl.className = 'slot-info slot-empty';
       return;
     }
 
     infoEl.className = 'slot-info';
     infoEl.textContent = status.dateLabel + ' / ' + status.period + '限 / ブース' + status.booth;
+
+    // 座席表示
+    var seat = status.seat || 1;
+    var seatLabel = seat === 1 ? '座席1（上段）' : '座席2（下段）';
+    var seatStudent = seat === 1 ? (status.student1Name || '') : (status.student2Name || '');
+    if (seatStudent) {
+      seatEl.textContent = seatLabel + ' — 配置済み: ' + seatStudent;
+      seatEl.className = 'slot-info slot-full';
+    } else {
+      seatEl.textContent = seatLabel + ' — 空き';
+      seatEl.className = 'slot-info';
+    }
 
     // 配置状況バッジ
     var teacher  = status.teacherName  || '';
@@ -671,7 +665,7 @@
     setStatusItem('statusStudent1', '生徒1: ' + (student1 || '未配置'), !!student1);
     setStatusItem('statusStudent2', '生徒2: ' + (student2 || '未配置'), !!student2);
 
-    var capLabel = student2 ? '1：2（満席）' : (student1 ? '1：2（追加可）' : '未配置');
+    var capLabel = (student1 && student2) ? '1：2（満席）' : (student1 || student2) ? '1：1（追加可）' : '未配置';
     setStatusItem('statusCapacity', '形式: ' + capLabel, !!student1);
     gridEl.classList.remove('hidden');
 
@@ -692,13 +686,11 @@
    */
   function applySlotAutoDetect(status) {
     if (!status) return;
-    var student1 = status.student1Name || '';
-    var student2 = status.student2Name || '';
+    var seat = status.seat || 1;
+    var seatStudent = seat === 1 ? (status.student1Name || '') : (status.student2Name || '');
 
-    if (student2) {
-      setMsg('msgStudent', '既に2名入室済みです（満席）', 'info');
-    } else if (student1) {
-      setMsg('msgStudent', '生徒1が配置済みです。生徒2を選択してください', 'info');
+    if (seatStudent) {
+      setMsg('msgStudent', '座席' + seat + 'は配置済みです（' + seatStudent + '）', 'info');
     } else {
       setMsg('msgStudent', '', '');
     }
@@ -731,18 +723,15 @@
 
   // ─── 生徒配置 ─────────────────────────────────────────────
   function placeStudent() {
-    var student1 = document.getElementById('student1Name').value;
-    if (!student1) { setMsg('msgStudent', '生徒1を選択してください', 'error'); return; }
+    var student = document.getElementById('studentName').value;
+    if (!student) { setMsg('msgStudent', '生徒を選択してください', 'error'); return; }
 
     var formData = {
-      student1Name:  student1,
-      student1Grade: getGradeFromSelect('student1Name'),
-      subject1:      document.getElementById('subject1').value,
-      student2Name:  document.getElementById('student2Name').value || '',
-      student2Grade: getGradeFromSelect('student2Name'),
-      subject2:      document.getElementById('subject2').value || '',
-      endDate:       document.getElementById('studentRepeatEnd').value.replace(/-/g, '/'),
-      repeat:        document.getElementById('studentRepeat').value,
+      studentName: student,
+      grade:       getGradeFromSelect('studentName'),
+      subject:     document.getElementById('subjectSel').value,
+      endDate:     document.getElementById('studentRepeatEnd').value.replace(/-/g, '/'),
+      repeat:      document.getElementById('studentRepeat').value,
     };
 
     setMsg('msgStudent', '処理中...', 'loading');
@@ -945,7 +934,8 @@
       setMsg('msgAttendance', 'ブース表のコマセルを選択してください', 'error');
       return;
     }
-    var studentName = currentSlotStatus.student1Name;
+    var seat = currentSlotStatus.seat || 1;
+    var studentName = seat === 1 ? currentSlotStatus.student1Name : currentSlotStatus.student2Name;
     if (!studentName) {
       setMsg('msgAttendance', '生徒が配置されていません', 'error');
       return;

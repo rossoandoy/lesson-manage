@@ -34,6 +34,7 @@ const BoothGrid = {
     const dayIndex   = Math.floor(relRow / g.ROWS_PER_DAY);
     const rowInDay   = relRow % g.ROWS_PER_DAY;
     const boothIndex = Math.floor(rowInDay / g.ROWS_PER_BOOTH);
+    const rowInBooth = rowInDay % g.ROWS_PER_BOOTH;
 
     const periodIndex = g.PERIOD_START_COLS.findIndex(
       (startCol) => col >= startCol && col < startCol + g.BLOCK_WIDTH
@@ -43,8 +44,9 @@ const BoothGrid = {
     return {
       dayIndex,
       boothIndex,
-      period: periodIndex + 1,
-      booth:  boothIndex + 1,
+      period:    periodIndex + 1,
+      booth:     boothIndex + 1,
+      seatIndex: rowInBooth + 1,  // 1=上段(座席1), 2=下段(座席2)
     };
   },
 
@@ -133,6 +135,37 @@ const BoothGrid = {
     sheet.getRange(row2, periodStartCol + o.STUDENT).setValue(entry.student2Name || '');
     sheet.getRange(row2, periodStartCol + o.GRADE).setValue(entry.student2Grade || '');
     sheet.getRange(row2, periodStartCol + o.SUBJECT).setValue(entry.subject2 || '');
+  },
+
+  /**
+   * 指定座席（1 or 2）に1名の生徒を書き込む。
+   * 講師名は entry.teacherName があれば更新、なければ既存を維持。
+   * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet
+   * @param {string} dateLabel 'YYYY/MM/DD'
+   * @param {number} period
+   * @param {number} booth
+   * @param {number} seat  1=上段, 2=下段
+   * @param {{ studentName:string, grade:string, subject:string, teacherName?:string }} data
+   */
+  writeStudentToSeat(sheet, dateLabel, period, booth, seat, data) {
+    const dateRowMap = this.buildDateRowMap(sheet);
+    const dayStartRow = dateRowMap.get(dateLabel);
+    if (dayStartRow === undefined) return;
+
+    const g = SettingsService.getBoothGridConfig();
+    const boothStartRow  = dayStartRow + (booth - 1) * g.ROWS_PER_BOOTH;
+    const periodStartCol = g.PERIOD_START_COLS[period - 1];
+    const o = g.COL_OFFSET;
+
+    const targetRow = boothStartRow + (seat - 1);
+    sheet.getRange(targetRow, periodStartCol + o.STUDENT).setValue(data.studentName || '');
+    sheet.getRange(targetRow, periodStartCol + o.GRADE).setValue(data.grade || '');
+    sheet.getRange(targetRow, periodStartCol + o.SUBJECT).setValue(data.subject || '');
+
+    // 講師名の更新（指定があれば）
+    if (data.teacherName) {
+      sheet.getRange(boothStartRow, periodStartCol + o.TEACHER).setValue(data.teacherName);
+    }
   },
 
   /**
@@ -445,7 +478,7 @@ const BoothGrid = {
    * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet
    * @param {number} row 1-indexed
    * @param {number} col 1-indexed
-   * @returns {{ dateLabel:string, period:number, booth:number } | null}
+   * @returns {{ dateLabel:string, period:number, booth:number, seat:number } | null}
    */
   getSlotContext(sheet, row, col) {
     const decoded = this.decodeCell(row, col);
@@ -468,6 +501,7 @@ const BoothGrid = {
       dateLabel,
       period: decoded.period,
       booth:  decoded.booth,
+      seat:   decoded.seatIndex,  // 1=上段(座席1), 2=下段(座席2)
     };
   },
 };

@@ -197,7 +197,7 @@ const ScheduleService = {
 
   /**
    * 現在のアクティブセルのコマ状態を返す（講師・生徒情報を含む）。
-   * @returns {{ dateLabel, period, booth, teacherName, student1Name, student2Name } | null}
+   * @returns {{ dateLabel, period, booth, seat, teacherName, student1Name, student2Name } | null}
    */
   getSlotStatus() {
     const slot = this._getActiveSlot();
@@ -246,28 +246,91 @@ const ScheduleService = {
   },
 
   /**
-   * サイドバーからコマを配置する（生徒配置）。
-   * @param {Object} formData
-   * @returns {{ success:boolean, message:string, count?:number }}
+   * サイドバーからコマを配置する（座席単位で1名を配置）。
+   * @param {Object} formData  { studentName, grade, subject, endDate, repeat }
+   * @returns {{ success:boolean, message:string, count?:number, placed:string[], skipped:string[] }}
    */
   placeScheduleFromSidebar(formData) {
     const slot = this._getActiveSlot();
     if (!slot) {
-      return { success: false, message: 'ブース表のコマセルを選択してください' };
+      return { success: false, message: 'ブース表のコマセルを選択してください', placed: [], skipped: [] };
     }
-    // capacity を自動判定: student2Name があれば 1:2、なければ 1:1
-    const capacity = (formData.student2Name && String(formData.student2Name).trim() !== '')
-      ? '1：2' : '1：1';
-    // teacherName をブース表の既存データから取得（フロントから渡されなかった場合）
-    if (!formData.teacherName) {
-      const status = this.getSlotStatus();
-      if (status) formData.teacherName = status.teacherName || '';
+
+    try {
+      const seat = slot.seat; // 1 or 2
+      const dates = this._generateDates(slot.dateLabel, formData.endDate, formData.repeat);
+      if (dates.length === 0) {
+        return { success: false, message: '書き込む対象の日付がありません', placed: [], skipped: [] };
+      }
+
+      // 講師名をブース表の既存データから取得
+      let teacherName = formData.teacherName || '';
+      if (!teacherName) {
+        const status = this.getSlotStatus();
+        if (status) teacherName = status.teacherName || '';
+      }
+
+      const boothSheet = SheetHelper.getSheet(CONFIG.SHEETS.BOOTH);
+      const dateRowMap = BoothGrid.buildDateRowMap(boothSheet);
+      const g = SettingsService.getBoothGridConfig();
+      const o = g.COL_OFFSET;
+
+      const placed = [];
+      const skipped = [];
+
+      dates.forEach((dateLabel) => {
+        const dayStartRow = dateRowMap.get(dateLabel);
+        if (dayStartRow === undefined) return;
+
+        const boothStartRow  = dayStartRow + (slot.booth - 1) * g.ROWS_PER_BOOTH;
+        const periodStartCol = g.PERIOD_START_COLS[slot.period - 1];
+        const targetRow = boothStartRow + (seat - 1);
+
+        // 座席単位の衝突チェック
+        const existingStudent = String(
+          boothSheet.getRange(targetRow, periodStartCol + o.STUDENT).getValue() || ''
+        ).trim();
+        if (existingStudent) {
+          skipped.push(dateLabel + ' ' + slot.period + '限（座席' + seat + '配置済み）');
+          return;
+        }
+
+        // ブース表に書き込み
+        BoothGrid.writeStudentToSeat(boothSheet, dateLabel, slot.period, slot.booth, seat, {
+          studentName: formData.studentName || '',
+          grade:       formData.grade || '',
+          subject:     formData.subject || '',
+          teacherName: teacherName,
+        });
+
+        // 印刷シートに追記（1名分 — 座席に関わらず1行として追記）
+        PrintSheet.appendEntry({
+          dateLabel,
+          period:        slot.period,
+          booth:         slot.booth,
+          teacherName:   teacherName,
+          student1Name:  formData.studentName || '',
+          student1Grade: formData.grade || '',
+          subject1:      formData.subject || '',
+          student2Name:  '',
+          student2Grade: '',
+          subject2:      '',
+          capacity:      '1：1',
+        });
+
+        placed.push(dateLabel + ' ' + slot.period + '限');
+      });
+
+      return {
+        success: placed.length > 0,
+        message: this._buildResultMessage(placed, skipped),
+        count:   placed.length,
+        placed,
+        skipped,
+      };
+    } catch (err) {
+      return { success: false, message: err.message, placed: [], skipped: [] };
     }
-    const fullFormData = Object.assign({}, formData, slot, {
-      startDate: slot.dateLabel,
-      capacity:  capacity,
-    });
-    return this.processSubmit(fullFormData);
   },
 
   /**
@@ -479,8 +542,8 @@ const ScheduleService = {
   // --- プライベートヘルパー ---
 
   /**
-   * アクティブセルからコマ情報を取得する。
-   * @returns {{ dateLabel:string, period:number, booth:number } | null}
+   * アクティブセルからコマ情報を取得する（seat を含む）。
+   * @returns {{ dateLabel:string, period:number, booth:number, seat:number } | null}
    */
   _getActiveSlot() {
     try {
