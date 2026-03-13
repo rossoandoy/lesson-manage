@@ -168,6 +168,59 @@ const AdminSheet = {
   },
 
   /**
+   * Template_Cover シートを初期化する。
+   * 教室名・教室長名・バージョン・更新日のラベルを配置する表紙シート。
+   */
+  initializeCoverSheet() {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheetName = CONFIG.PARENT.SHEETS.TEMPLATE_COVER;
+    let sheet = ss.getSheetByName(sheetName);
+    if (!sheet) {
+      sheet = ss.insertSheet(sheetName);
+    }
+
+    // タイトル行
+    sheet.getRange('A1').setValue('教室情報');
+    sheet.getRange('A1').setFontWeight('bold').setFontSize(14);
+
+    // ラベル（A列）
+    const labels = [
+      ['教室名'],
+      ['教室長名'],
+      ['バージョン'],
+      ['更新日'],
+    ];
+    sheet.getRange('A3:A6').setValues(labels);
+    sheet.getRange('A3:A6').setFontWeight('bold');
+
+    // 列幅調整
+    sheet.setColumnWidth(1, 120);  // A列: ラベル
+    sheet.setColumnWidth(2, 240);  // B列: 値
+
+    return sheet;
+  },
+
+  /**
+   * Template_Cover の各セルに教室情報を書き込む。
+   * コピー生成後に呼び出して教室固有の値を埋める。
+   * @param {string} classroomName 教室名
+   * @param {string} managerName   教室長名
+   */
+  updateCover(classroomName, managerName) {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(CONFIG.PARENT.SHEETS.TEMPLATE_COVER);
+    if (!sheet) throw new Error('Template_Cover シートが見つかりません');
+
+    const cells = CONFIG.PARENT.TEMPLATE_COVER.CELLS;
+    sheet.getRange(cells.CLASSROOM_NAME).setValue(classroomName || '');
+    sheet.getRange(cells.MANAGER_NAME).setValue(managerName || '');
+
+    const ver = this.getLatestVersion();
+    sheet.getRange(cells.VERSION).setValue(ver ? ver.version : '');
+    sheet.getRange(cells.UPDATE_DATE).setValue(new Date());
+  },
+
+  /**
    * Admin_Version シートにバージョンを追記する。
    * @param {string} version  例: '1.0.0'
    * @param {string} description

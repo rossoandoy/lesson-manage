@@ -101,6 +101,7 @@ const CONFIG = {
     SHEETS: {
       ADMIN_CLASSROOMS: 'Admin_Classrooms',
       ADMIN_VERSION:    'Admin_Version',
+      TEMPLATE_COVER:   'Template_Cover',
     },
     ADMIN_CLASSROOMS: {
       HEADER_ROW: 1,
@@ -126,6 +127,49 @@ const CONFIG = {
         COMMIT_HASH:  4,
       },
     },
+    TEMPLATE_COVER: {
+      CELLS: {
+        CLASSROOM_NAME: 'B3',
+        MANAGER_NAME:   'B4',
+        VERSION:        'B5',
+        UPDATE_DATE:    'B6',
+      },
+    },
+  },
+
+  SFDC: {
+    PROP_KEYS: {
+      CLIENT_ID:     'SFDC_CLIENT_ID',
+      CLIENT_SECRET: 'SFDC_CLIENT_SECRET',
+      INSTANCE_URL:  'SFDC_INSTANCE_URL',
+      ACCESS_TOKEN:  'SFDC_ACCESS_TOKEN',
+      TOKEN_EXPIRY:  'SFDC_TOKEN_EXPIRY',
+    },
+    PATHS: {
+      TOKEN:    '/services/oauth2/token',
+      QUERY:    '/services/data/v62.0/query',
+      SOBJECTS: '/services/data/v62.0/sobjects',
+    },
+    OBJECTS: {
+      ACCOUNT: 'Account',
+    },
+    FIELDS: {
+      CLASSROOM_NAME:   'Name',
+      SCHOOL_MANAGER:   'SchoolManager__c',
+      SCHOOL_MANAGER_R: 'SchoolManager__r.Name',
+      STATUS:           'MANAERP__Status__c',
+      SS_URL:           'Spreadsheet_URL__c',
+      BOOTH_COUNT:      'TRG_BoothCount__c',
+      INV_STUDENT:      'MANAERP__Contact__c',
+      INV_STUDENT_NAME: 'MANAERP__Contact__r.Name',
+      INV_YEAR_MONTH:   'TRG_IF_RevenueMonth__c',
+      INV_TOTAL:        'MANAERP__Total__c',
+      INV_PAID:         'MANAERP__Amount_Paid__c',
+    },
+    RECORD_TYPES: {
+      LOCATION: 'Location',
+    },
+    TOKEN_MARGIN_MS: 5 * 60 * 1000,
   },
 
   MASTER: {

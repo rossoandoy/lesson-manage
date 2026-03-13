@@ -79,3 +79,8 @@
 | 2026-03-12 | 親シートと教室用は同一 GAS プロジェクトで共存 | 現在のテンプレートスプレッドシートを親シートとしてテンプレート兼管理に。適切性は評価した上で実装 |
 | 2026-03-12 | Salesforce 認証は Client Credentials を採用 | Connected App の設定に合わせる。JWT Bearer は使わない |
 | 2026-03-12 | 最初の着手は親シート構造の定義から | プロビジョニング・SF 連携より先に SPEC でシート構成・列定義を確定する |
+| 2026-03-12 | Template_Main は不要（既存業務シート群がテンプレート） | Phase 5 の makeCopy で親 SS 全体をコピーし、コピー先で Admin_* を削除する設計。別途テンプレートシートを作ると二重管理になるため |
+| 2026-03-12 | 親スプレッドシート構造化 完了 | Template_Cover / Admin_Version / Admin_Classrooms の 3 シートを GAS で初期化。initAdminSheets() で一括作成 |
+| 2026-03-13 | Phase 4 SF 連携 完了 | 13_SfdcApi.gs で Client Credentials 認証・SOQL・PATCH・tran 同期を実装。管理メニューに SF 操作を追加 |
+| 2026-03-13 | Spreadsheet_URL__c は SF 側で未作成 | GAS コードは作成済み前提で実装。フィールド作成は SF 管理者作業 |
+| 2026-03-13 | SchoolManager__c は Contact ルックアップ | User ではなく Contact への参照。Admin_Classrooms の managerId には Contact ID が入る |

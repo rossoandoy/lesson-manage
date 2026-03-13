@@ -39,6 +39,12 @@ function onOpen(e) {
       .addItem('新規教室のシートを生成', 'provisionNewClassrooms')
       .addItem('全教室テンプレート更新', 'updateAllTemplates')
       .addSeparator()
+      .addItem('SF URL書き戻し', 'writebackUrlsToSF')
+      .addItem('tran シート同期 (SF→シート)', 'syncTranFromSF')
+      .addSeparator()
+      .addItem('SF 接続設定', 'setupSFCredentials')
+      .addItem('SF 接続テスト', 'testSFConnection')
+      .addSeparator()
       .addItem('バージョン情報を表示', 'showVersionInfo')
       .addToUi();
   } else {
@@ -420,6 +426,7 @@ function processScheduleDialogSubmit(formData) {
 function initAdminSheets() {
   AdminSheet.initializeClassroomsSheet();
   AdminSheet.initializeVersionSheet();
+  AdminSheet.initializeCoverSheet();
   AdminSheet.addVersion('1.0.0', '初期バージョン', '');
   SpreadsheetApp.getActiveSpreadsheet().toast(
     'Admin シートを初期化しました。リロードすると管理メニューが表示されます。'
@@ -427,10 +434,58 @@ function initAdminSheets() {
 }
 
 /**
- * 教室一覧をSalesforceから同期する（Phase 2で実装）。
+ * 教室一覧を Salesforce から同期する。
  */
 function syncClassroomsFromSF() {
-  SpreadsheetApp.getUi().alert('この機能は Phase 2 で実装予定です。');
+  if (!SfdcApi.hasCredentials()) {
+    SpreadsheetApp.getUi().alert('SF 接続情報が未設定です。管理メニュー → SF 接続設定 を実行してください。');
+    return;
+  }
+  SfdcApi.syncClassroomsToSheet();
+}
+
+/**
+ * Admin_Classrooms の SS URL を Salesforce に書き戻す。
+ */
+function writebackUrlsToSF() {
+  if (!SfdcApi.hasCredentials()) {
+    SpreadsheetApp.getUi().alert('SF 接続情報が未設定です。管理メニュー → SF 接続設定 を実行してください。');
+    return;
+  }
+  SfdcApi.writebackAllUrls();
+}
+
+/**
+ * Salesforce の請求データを tran シートに同期する。
+ */
+function syncTranFromSF() {
+  if (!SfdcApi.hasCredentials()) {
+    SpreadsheetApp.getUi().alert('SF 接続情報が未設定です。管理メニュー → SF 接続設定 を実行してください。');
+    return;
+  }
+  const ui = SpreadsheetApp.getUi();
+  const resp = ui.prompt('tran シート同期', '同期する年月を入力してください (例: 2025/04)', ui.ButtonSet.OK_CANCEL);
+  if (resp.getSelectedButton() !== ui.Button.OK) return;
+  const yearMonth = resp.getResponseText().trim();
+  if (!/^\d{4}\/\d{2}$/.test(yearMonth)) {
+    ui.alert('年月の形式が正しくありません。YYYY/MM 形式で入力してください。');
+    return;
+  }
+  SfdcApi.syncTranSheet(yearMonth);
+}
+
+/**
+ * SF 接続情報を設定する。
+ */
+function setupSFCredentials() {
+  SfdcApi.promptCredentials();
+}
+
+/**
+ * SF 接続をテストする。
+ */
+function testSFConnection() {
+  SfdcApi.testConnection();
 }
 
 /**

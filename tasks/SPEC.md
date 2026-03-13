@@ -43,16 +43,89 @@
 
 **GAS での参照**: ヘッダー行 1、データは 2 行目以降。ClassroomId または SpreadsheetId で行検索。
 
-### Template_Cover（案）
+### Template_Main について（設計結論）
 
-- 教室名・教室長名・現在のバージョン番号・更新日を表示する表紙シート。コピー生成時に GAS でセルを書き込む。列レイアウトは実装時に確定。
+別途 `Template_Main` シートは作成しない。既存の業務シート群（ブース表, 印刷シート, 回数報告, master_*, tran）がそのままテンプレートとして機能する。Phase 5 の `DriveApp.makeCopy()` で親 SS 全体をコピーし、コピー先で Admin_* シートを削除する設計とする。
+
+### Template_Cover
+
+教室に配布する SS の先頭に置く表紙シート。`AdminSheet.initializeCoverSheet()` で初期化される。
+
+**レイアウト**:
+| セル | 内容 |
+|------|------|
+| A1 | タイトル「教室情報」（太字 14pt） |
+| A3 | ラベル「教室名」 |
+| B3 | 値（プロビジョニング時に `updateCover()` で書き込み） |
+| A4 | ラベル「教室長名」 |
+| B4 | 値 |
+| A5 | ラベル「バージョン」 |
+| B5 | 値（`getLatestVersion()` から取得） |
+| A6 | ラベル「更新日」 |
+| B6 | 値（現在日時） |
+
+**CONFIG 定義**: `CONFIG.PARENT.TEMPLATE_COVER.CELLS` にセル位置を定義（CLASSROOM_NAME: B3, MANAGER_NAME: B4, VERSION: B5, UPDATE_DATE: B6）。
+
+**関数**:
+- `AdminSheet.initializeCoverSheet()` — シート作成 + ラベル配置 + 書式設定
+- `AdminSheet.updateCover(classroomName, managerName)` — コピー生成後に教室固有の値を書き込み
 
 ---
 
-## Phase 4: Salesforce 連携（認証方式）
+## Phase 4: Salesforce 連携
 
-- **認証方式**: **Client Credentials**（Connected App のクライアント ID / クライアントシークレット）。JWT Bearer は使用しない。
-- トークン取得後、REST API で SOQL 実行・PATCH 書き戻しを行う。詳細は Phase 4 実装時に SPEC 追記。
+### 認証方式
+- **Client Credentials**（Connected App のクライアント ID / クライアントシークレット）。JWT Bearer は使用しない。
+- トークンは ScriptProperties にキャッシュし、期限切れ（5分マージン）で自動再認証。
+- 401 レスポンス時は 1 回だけリトライ。
+
+### P4.1 認証モジュール (`13_SfdcApi.gs`)
+- `getCredentials()` / `saveCredentials(creds)` / `hasCredentials()` — ScriptProperties に保存
+- `authenticate()` — POST `/services/oauth2/token` (grant_type=client_credentials)
+- `_getAccessToken()` — キャッシュ済みトークン or 再認証
+- `_request(method, path, body)` — 汎用 REST。401 時 1 回リトライ
+- `_query(soql)` — SOQL + nextRecordsUrl ページネーション
+
+### P4.2 教室データ取得
+```sql
+SELECT Id, Name, SchoolManager__c, SchoolManager__r.Name,
+       MANAERP__Status__c, Spreadsheet_URL__c, TRG_BoothCount__c
+FROM Account
+WHERE RecordType.DeveloperName = 'Location'
+  AND MANAERP__Status__c = 'Operating'
+```
+- `getClassrooms()` → レコード配列
+- `syncClassroomsToSheet()` → `AdminSheet.upsertClassroom()` でアップサート
+  - classroomId = Account.Id, classroomName = Name
+  - managerId = SchoolManager__c, managerName = SchoolManager__r.Name
+
+### P4.3 URL 書き戻し
+- `updateSpreadsheetUrl(accountId, url)` — PATCH `/sobjects/Account/{id}` で `Spreadsheet_URL__c` 更新
+- `writebackAllUrls()` — Admin_Classrooms を巡回し SS URL を SF に書き戻し
+- **前提**: SF 側に `Spreadsheet_URL__c` カスタム項目が作成済みであること
+
+### P4.4 tran シート同期
+```sql
+SELECT MANAERP__Contact__c, MANAERP__Contact__r.Name,
+       TRG_IF_RevenueMonth__c, Name,
+       MANAERP__Total__c, MANAERP__Amount_Paid__c
+FROM MANAERP__Invoice__c
+WHERE TRG_IF_RevenueMonth__c = '{yearMonth}'
+```
+- `getTranData(yearMonth)` → レコード配列
+- `syncTranSheet(yearMonth)` → `TranSheet.bulkWrite()` で一括書き込み
+
+### P4.5 設定 UI
+- `promptCredentials()` — `ui.prompt()` ×3 で Instance URL / Client ID / Client Secret 入力
+- `testConnection()` — 認証 + `SELECT Id FROM Organization LIMIT 1`
+
+### メニュー追加（管理メニュー）
+| メニュー項目 | グローバル関数 |
+|-------------|--------------|
+| SF URL書き戻し | `writebackUrlsToSF()` |
+| tran シート同期 (SF→シート) | `syncTranFromSF()` |
+| SF 接続設定 | `setupSFCredentials()` |
+| SF 接続テスト | `testSFConnection()` |
 
 ---
 
