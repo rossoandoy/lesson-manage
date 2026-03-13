@@ -3,8 +3,8 @@
 ## アーキテクチャ決定
 
 ### ファイル構成規約
-- ファイル番号プレフィックス `00_` 〜 `09_` で GAS の読み込み順を保証
-- 新規ファイルは `10_` 以降を使用（`10_PrintView.gs`, `11_SalesforceAuth.gs` 等）
+- ファイル番号プレフィックス `00_` 〜 `13_` で GAS の読み込み順を保証
+- 新規ファイルは `14_` 以降を使用
 - GAS は ES モジュール非対応 → `const ServiceName = { ... }` オブジェクトリテラルパターンを使用
 - グローバル関数は `01_Main.gs` に集約（google.script.run のエントリーポイント）
 
@@ -44,8 +44,10 @@
 - `clearSlot` はブース番号・講師セルの merge を再構築する
 
 ### OAuthスコープ
-- 現在: `spreadsheets`, `drive.readonly`, `script.container.ui`
-- SF連携時に追加予定: `script.external_request`（UrlFetchApp 用）
+- `spreadsheets` — スプレッドシート操作
+- `drive` — DriveApp（makeCopy 等）
+- `script.container.ui` — サイドバー・ダイアログ
+- `script.external_request` — UrlFetchApp（Salesforce REST API）
 
 ---
 
@@ -91,9 +93,12 @@
 | シート | ヘッダー行 | データ開始行 | 主要列 |
 |--------|-----------|-------------|--------|
 | ブース表 | 7 | 8 | A:日付, B〜:時限ブロック(5列×N) |
-| 印刷シート | 8 | 9 | A:日付〜J:出欠 (10列) |
+| 印刷シート | 8 | 9 | A:日付〜L:振替先日付 (12列) |
 | 回数報告 | 8 | 9 | A〜E:tran参照, F〜J:集計値 |
 | tran | 1 | 2 | A:生徒ID〜F:支払済 (6列) |
 | master_students | 1 | 2 | A:ID, B:氏名, C:学年 |
 | master_staffs | 1 | 2 | A:ID, B:氏名 |
 | master_subjects | 1 | 2 | A:教科名 |
+| Template_Cover | — | — | A1:タイトル, A3〜B6:教室情報 |
+| Admin_Version | 1 | 2 | A:Version〜D:CommitHash |
+| Admin_Classrooms | 1 | 2 | A:ClassroomId〜H:SyncStatus |
