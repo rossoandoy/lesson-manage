@@ -10,42 +10,49 @@ function onOpen(e) {
   SheetHelper.ensureTimezone();
   const ui = SpreadsheetApp.getUi();
 
-  // 教室メニュー（常に表示）
-  ui.createMenu('コマ組メニュー')
+  // コマ組メニュー（日常操作のみ）
+  ui.createMenu('コマ組')
     .addItem('コマ組サイドバーを開く', 'openScheduleSidebar')
     .addSeparator()
-    .addItem('ブース表を初期化（表示期間を設定）', 'setDisplayRange')
+    .addItem('データ出力', 'showDataOutputDialog')
+    .addItem('印刷プレビュー', 'showPrintViewDialog')
     .addSeparator()
+    .addItem('印刷シートを同期', 'syncPrintSheet')
+    .addToUi();
+
+  // レポートメニュー
+  ui.createMenu('レポート')
     .addItem('回数報告を生成', 'runReport')
-    .addItem('全生徒レポート一括生成', 'runAllReports')
+    .addItem('全生徒一括レポート', 'runAllReports')
     .addItem('前年度累計を設定', 'setPrevYearTotals')
+    .addToUi();
+
+  // 初期設定メニュー
+  ui.createMenu('初期設定')
+    .addItem('ブース表を初期化', 'setDisplayRange')
+    .addItem('印刷シートヘッダーを初期化', 'initPrintSheetHeader')
     .addSeparator()
     .addItem('教科マスタを初期化', 'initSubjectMaster')
     .addItem('講師マスタを初期化', 'initStaffMaster')
     .addItem('生徒マスタを初期化', 'initStudentMaster')
     .addItem('tran シートを初期化', 'initTranSheet')
-    .addSeparator()
-    .addItem('印刷シートヘッダーを初期化', 'initPrintSheetHeader')
-    .addItem('印刷シートを同期', 'syncPrintSheet')
-    .addSeparator()
-    .addItem('データ出力（フィルタ付き）', 'showDataOutputDialog')
-    .addItem('ブース表を印刷用に表示', 'showPrintViewDialog')
     .addToUi();
 
   // 親シートの場合のみ管理メニューを追加
   if (AdminSheet.isParent()) {
     ui.createMenu('管理メニュー')
-      .addItem('教室一覧を同期 (SF→シート)', 'syncClassroomsFromSF')
-      .addItem('新規教室のシートを生成', 'provisionNewClassrooms')
-      .addItem('全教室テンプレート更新', 'updateAllTemplates')
+      .addItem('教室を同期', 'syncClassroomsFromSF')
+      .addItem('教室シートを生成', 'provisionNewClassrooms')
+      .addItem('テンプレート一括更新', 'updateAllTemplates')
       .addSeparator()
-      .addItem('SF URL書き戻し', 'writebackUrlsToSF')
-      .addItem('tran シート同期 (SF→シート)', 'syncTranFromSF')
+      .addItem('tran を同期', 'syncTranFromSF')
+      .addItem('SF に URL 書き戻し', 'writebackUrlsToSF')
       .addSeparator()
       .addItem('SF 接続設定', 'setupSFCredentials')
       .addItem('SF 接続テスト', 'testSFConnection')
       .addSeparator()
-      .addItem('バージョン情報を表示', 'showVersionInfo')
+      .addItem('自動同期を開始', 'installProvisionTrigger')
+      .addItem('自動同期を停止', 'removeProvisionTrigger')
       .addToUi();
   } else {
     // 子シートでも初期化メニューを出す（Admin未作成時に使う）
@@ -489,35 +496,83 @@ function testSFConnection() {
 }
 
 /**
- * 新規教室のスプレッドシートを生成する（Phase 3で実装）。
+ * 新規教室のスプレッドシートを生成する。
  */
 function provisionNewClassrooms() {
-  SpreadsheetApp.getUi().alert('この機能は Phase 3 で実装予定です。');
-}
-
-/**
- * 全教室のテンプレートを更新する（Phase 4で実装）。
- */
-function updateAllTemplates() {
-  SpreadsheetApp.getUi().alert('この機能は Phase 4 で実装予定です。');
-}
-
-/**
- * バージョン情報をダイアログで表示する。
- */
-function showVersionInfo() {
   const ui = SpreadsheetApp.getUi();
-  const ver = AdminSheet.getLatestVersion();
-  if (!ver) {
-    ui.alert('バージョン情報', 'バージョン情報がありません。', ui.ButtonSet.OK);
+  const classrooms = AdminSheet.getClassrooms().filter(c => !c.ssId);
+  if (classrooms.length === 0) {
+    ui.alert('プロビジョニング', '新規教室はありません。', ui.ButtonSet.OK);
     return;
   }
-  const dateStr = ver.releaseDate instanceof Date
-    ? Utilities.formatDate(ver.releaseDate, 'Asia/Tokyo', 'yyyy/MM/dd')
-    : String(ver.releaseDate);
-  ui.alert(
-    'バージョン情報',
-    `バージョン: ${ver.version}\nリリース日: ${dateStr}\n説明: ${ver.description}\nコミット: ${ver.commitHash || '(なし)'}`,
-    ui.ButtonSet.OK
+  const resp = ui.alert(
+    'プロビジョニング',
+    classrooms.length + ' 件の教室シートを生成します。よろしいですか？',
+    ui.ButtonSet.OK_CANCEL
+  );
+  if (resp !== ui.Button.OK) return;
+
+  const result = Provisioning.provisionAll();
+  let msg = result.provisioned + ' 件の教室シートを生成しました。';
+  if (result.errors.length > 0) {
+    msg += '\n\nエラー:\n' + result.errors.join('\n');
+  }
+  ui.alert('プロビジョニング結果', msg, ui.ButtonSet.OK);
+}
+
+/**
+ * 全教室のテンプレートを更新する。
+ */
+function updateAllTemplates() {
+  const ui = SpreadsheetApp.getUi();
+  const classrooms = AdminSheet.getClassrooms().filter(c => c.ssId);
+  if (classrooms.length === 0) {
+    ui.alert('テンプレート更新', '更新対象の教室がありません。', ui.ButtonSet.OK);
+    return;
+  }
+  const resp = ui.alert(
+    'テンプレート更新',
+    classrooms.length + ' 件の教室テンプレートを更新します。よろしいですか？',
+    ui.ButtonSet.OK_CANCEL
+  );
+  if (resp !== ui.Button.OK) return;
+
+  const result = Provisioning.updateAllTemplates();
+  let msg = result.updated + ' 件のテンプレートを更新しました。';
+  if (result.errors.length > 0) {
+    msg += '\n\nエラー:\n' + result.errors.join('\n');
+  }
+  ui.alert('テンプレート更新結果', msg, ui.ButtonSet.OK);
+}
+
+/**
+ * 日次同期+プロビジョニング（トリガーから呼び出し）。
+ */
+function triggerDailySyncAndProvision() {
+  Provisioning.dailySyncAndProvision();
+}
+
+/**
+ * 定期同期トリガーを設定する。
+ */
+function installProvisionTrigger() {
+  Provisioning.installDailyTrigger();
+  SpreadsheetApp.getUi().alert(
+    'トリガー設定',
+    '日次同期トリガーを設定しました（毎日 ' + CONFIG.PARENT.PROVISION.TRIGGER_HOUR + ' 時に実行）。',
+    SpreadsheetApp.getUi().ButtonSet.OK
   );
 }
+
+/**
+ * 定期同期トリガーを解除する。
+ */
+function removeProvisionTrigger() {
+  Provisioning.removeDailyTrigger();
+  SpreadsheetApp.getUi().alert(
+    'トリガー解除',
+    '日次同期トリガーを解除しました。',
+    SpreadsheetApp.getUi().ButtonSet.OK
+  );
+}
+

@@ -204,21 +204,23 @@ const ScheduleService = {
     if (!slot) return null;
 
     const sheet = SheetHelper.getSheet(CONFIG.SHEETS.BOOTH);
-    const dateRowMap = BoothGrid.buildDateRowMap(sheet);
-    const dayStartRow = dateRowMap.get(slot.dateLabel);
-    if (!dayStartRow) {
-      return Object.assign({}, slot, { teacherName: '', student1Name: '', student2Name: '' });
-    }
-
     const g = SettingsService.getBoothGridConfig();
+    const cell = SpreadsheetApp.getActiveSheet().getActiveCell();
+    const decoded = BoothGrid.decodeCell(cell.getRow(), cell.getColumn());
+    if (!decoded) return Object.assign({}, slot, { teacherName: '', student1Name: '', student2Name: '' });
+
+    const dayStartRow    = g.DATA_START_ROW + decoded.dayIndex * g.ROWS_PER_DAY;
     const boothStartRow  = dayStartRow + (slot.booth - 1) * g.ROWS_PER_BOOTH;
     const periodStartCol = g.PERIOD_START_COLS[slot.period - 1];
     const o = g.COL_OFFSET;
 
+    // 2行 × 4列をバッチ読み取り (TEACHER, STUDENT, GRADE, SUBJECT)
+    const vals = sheet.getRange(boothStartRow, periodStartCol + o.TEACHER, 2, 4).getValues();
+
     return Object.assign({}, slot, {
-      teacherName:  String(sheet.getRange(boothStartRow,     periodStartCol + o.TEACHER ).getValue() || ''),
-      student1Name: String(sheet.getRange(boothStartRow,     periodStartCol + o.STUDENT ).getValue() || ''),
-      student2Name: String(sheet.getRange(boothStartRow + 1, periodStartCol + o.STUDENT ).getValue() || ''),
+      teacherName:  String(vals[0][0] || ''),
+      student1Name: String(vals[0][1] || ''),
+      student2Name: String(vals[1][1] || ''),
     });
   },
 

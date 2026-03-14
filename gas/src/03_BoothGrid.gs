@@ -484,24 +484,16 @@ const BoothGrid = {
     const decoded = this.decodeCell(row, col);
     if (!decoded) return null;
 
-    const dateRowMap = this.buildDateRowMap(sheet);
     const g = SettingsService.getBoothGridConfig();
-    const targetStartRow = g.DATA_START_ROW + decoded.dayIndex * g.ROWS_PER_DAY;
-
-    let dateLabel = null;
-    for (const [label, startRow] of dateRowMap) {
-      if (startRow === targetStartRow) {
-        dateLabel = label;
-        break;
-      }
-    }
-    if (!dateLabel) return null;
+    const dayStartRow = g.DATA_START_ROW + decoded.dayIndex * g.ROWS_PER_DAY;
+    const dateVal = sheet.getRange(dayStartRow, g.DATE_COL).getValue();
+    if (!(dateVal instanceof Date) || isNaN(dateVal)) return null;
 
     return {
-      dateLabel,
+      dateLabel: SheetHelper.formatDate(dateVal),
       period: decoded.period,
       booth:  decoded.booth,
-      seat:   decoded.seatIndex,  // 1=上段(座席1), 2=下段(座席2)
+      seat:   decoded.seatIndex,
     };
   },
 };
