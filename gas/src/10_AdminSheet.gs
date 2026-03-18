@@ -36,6 +36,7 @@ const AdminSheet = {
     headers[cols.SS_ID - 1]          = 'SS ID';
     headers[cols.CURRENT_VERSION - 1] = 'バージョン';
     headers[cols.SYNC_STATUS - 1]    = 'ステータス';
+    headers[cols.MANAGER_EMAIL - 1]  = 'メールアドレス';
 
     const headerRow = CONFIG.PARENT.ADMIN_CLASSROOMS.HEADER_ROW;
     sheet.getRange(headerRow, 1, 1, headers.length).setValues([headers]);
@@ -99,6 +100,7 @@ const AdminSheet = {
         ssId:           row[cfg.COLS.SS_ID - 1],
         currentVersion: row[cfg.COLS.CURRENT_VERSION - 1],
         syncStatus:     row[cfg.COLS.SYNC_STATUS - 1],
+        managerEmail:   row[cfg.COLS.MANAGER_EMAIL - 1],
       }));
   },
 
@@ -141,6 +143,7 @@ const AdminSheet = {
     rowData[cols.SS_ID - 1]           = data.ssId || '';
     rowData[cols.CURRENT_VERSION - 1] = data.currentVersion || '';
     rowData[cols.SYNC_STATUS - 1]     = data.syncStatus || '';
+    rowData[cols.MANAGER_EMAIL - 1]   = data.managerEmail || '';
 
     sheet.getRange(targetRow, 1, 1, rowData.length).setValues([rowData]);
   },

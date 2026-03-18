@@ -2,3 +2,5 @@
 *.xlsx
 node_modules/
 .claude/
+.superset/
+sf-metadata/

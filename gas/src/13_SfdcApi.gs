@@ -173,10 +173,10 @@ const SfdcApi = {
    */
   getClassrooms() {
     const soql = [
-      'SELECT Id, Name, SchoolManager__c, SchoolManager__r.Name,',
+      'SELECT Id, Name, SchoolManager__c, SchoolManager__r.Name, SchoolManager__r.Email,',
       '       MANAERP__Status__c, Spreadsheet_URL__c, TRG_BoothCount__c',
       'FROM Account',
-      "WHERE RecordType.DeveloperName = 'Location'",
+      "WHERE MANAERP__Location_Type__c = 'Center'",
       "  AND MANAERP__Status__c = 'Operating'",
     ].join(' ');
 
@@ -196,6 +196,7 @@ const SfdcApi = {
         classroomName: acc.Name || '',
         managerId:     acc.SchoolManager__c || '',
         managerName:   (acc.SchoolManager__r && acc.SchoolManager__r.Name) || '',
+        managerEmail:  (acc.SchoolManager__r && acc.SchoolManager__r.Email) || '',
         ssUrl:         acc.Spreadsheet_URL__c || '',
       });
       count++;
@@ -208,30 +209,50 @@ const SfdcApi = {
   // ─── URL 書き戻し (4.3) ───
 
   /**
-   * Account の Spreadsheet_URL__c を更新する。
+   * Account の SS URL フィールドを更新する。
+   * 注意: SF に該当カスタムフィールドが未作成の場合は警告のみ。
    * @param {string} accountId  SF Account ID
    * @param {string} url        スプレッドシート URL
    */
   updateSpreadsheetUrl(accountId, url) {
     const path = CONFIG.SFDC.PATHS.SOBJECTS + '/' + CONFIG.SFDC.OBJECTS.ACCOUNT + '/' + accountId;
-    this._request('patch', path, { Spreadsheet_URL__c: url });
+    const body = {};
+    body[CONFIG.SFDC.FIELDS.SS_URL] = url;
+    this._request('patch', path, body);
   },
 
   /**
    * Admin_Classrooms の全教室について、SS URL を SF に書き戻す。
    */
   writebackAllUrls() {
-    const classrooms = AdminSheet.getClassrooms();
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(CONFIG.PARENT.SHEETS.ADMIN_CLASSROOMS);
+    if (!sheet) {
+      ss.toast('Admin_Classrooms シートが見つかりません');
+      return 0;
+    }
+
+    const cols = CONFIG.PARENT.ADMIN_CLASSROOMS.COLS;
+    const startRow = CONFIG.PARENT.ADMIN_CLASSROOMS.DATA_START_ROW;
+    const lastRow = sheet.getLastRow();
+    if (lastRow < startRow) {
+      ss.toast('書き戻し対象の教室がありません');
+      return 0;
+    }
+
+    const data = sheet.getRange(startRow, 1, lastRow - startRow + 1, cols.SS_URL).getValues();
     let count = 0;
 
-    classrooms.forEach(c => {
-      if (c.classroomId && c.ssUrl) {
-        this.updateSpreadsheetUrl(c.classroomId, c.ssUrl);
+    data.forEach(row => {
+      const classroomId = row[cols.CLASSROOM_ID - 1];
+      const ssUrl       = row[cols.SS_URL - 1];
+      if (classroomId && ssUrl) {
+        this.updateSpreadsheetUrl(classroomId, ssUrl);
         count++;
       }
     });
 
-    SpreadsheetApp.getActiveSpreadsheet().toast(count + ' 件の URL を SF に書き戻しました');
+    ss.toast(count + ' 件の SS URL を SF に書き戻しました');
     return count;
   },
 

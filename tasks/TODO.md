@@ -76,10 +76,10 @@
 
 ## Phase 5: マルチ教室プロビジョニング
 
-- [ ] 5.1 Admin_Classrooms / Admin_Version シート
-- [ ] 5.2 DriveApp.makeCopy + 権限設定
-- [ ] 5.3 テンプレート一括更新
-- [ ] 5.4 定期実行トリガー
-- [ ] 5.5 Webhook (doPost) — オプション
+- [x] 5.1 Admin_Classrooms / Admin_Version シート（Phase 4 で実装済み、メールアドレス列追加）
+- [x] 5.2 DriveApp.makeCopy + 権限設定
+- [x] 5.3 テンプレート一括更新
+- [x] 5.4 定期実行トリガー
+- [ ] 5.5 Webhook (doPost) — スキップ
 
-完了率: 0/5
+完了率: 4/5 ✅

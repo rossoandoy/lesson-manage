@@ -115,6 +115,7 @@ const CONFIG = {
         SS_ID:           6,
         CURRENT_VERSION: 7,
         SYNC_STATUS:     8,
+        MANAGER_EMAIL:   9,
       },
     },
     ADMIN_VERSION: {
@@ -134,6 +135,17 @@ const CONFIG = {
         VERSION:        'B5',
         UPDATE_DATE:    'B6',
       },
+    },
+    PROVISION: {
+      NAME_PREFIX: 'レッスン管理_',
+      FOLDER_ID: null,   // null = 親SSと同じフォルダ
+      TEMPLATE_SHEETS: [
+        'master_students', 'master_staffs', 'master_subjects',
+        'Template_Cover',
+      ],
+      TRIGGER_FUNCTION: 'triggerDailySyncAndProvision',
+      TRIGGER_HOUR: 6,
+      MAX_PROVISION_PER_RUN: 50,
     },
   },
 
@@ -157,14 +169,15 @@ const CONFIG = {
       CLASSROOM_NAME:   'Name',
       SCHOOL_MANAGER:   'SchoolManager__c',
       SCHOOL_MANAGER_R: 'SchoolManager__r.Name',
+      SCHOOL_MANAGER_EMAIL: 'SchoolManager__r.Email',
       STATUS:           'MANAERP__Status__c',
-      SS_URL:           'Spreadsheet_URL__c',
-      BOOTH_COUNT:      'TRG_BoothCount__c',
       INV_STUDENT:      'MANAERP__Contact__c',
       INV_STUDENT_NAME: 'MANAERP__Contact__r.Name',
       INV_YEAR_MONTH:   'TRG_IF_RevenueMonth__c',
       INV_TOTAL:        'MANAERP__Total__c',
       INV_PAID:         'MANAERP__Amount_Paid__c',
+      SS_URL:           'Spreadsheet_URL__c',
+      BOOTH_COUNT:      'TRG_BoothCount__c',
     },
     RECORD_TYPES: {
       LOCATION: 'Location',
